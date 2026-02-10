@@ -1,11 +1,13 @@
-import { Body, Controller, Post } from "@nestjs/common";
+import { Body, Controller, Post, Res } from "@nestjs/common";
 import { AuthService } from "./auth.service";
 import { RegisterDto } from "./dtos/register.dto";
+import { VerifyEmailDto } from "./dtos/verify-email.dto";
 import { LoginDto } from "./dtos/login.dto";
 import { ForgotPasswordDto } from "./dtos/forgot-password.dto";
 import { ResetPasswordDto } from "./dtos/reset-password.dto";
+import type { Response } from "express";
 
-@Controller("api/auth")
+@Controller("auth-ser/api/auth")
 export class AuthController {
 	constructor(private readonly authService: AuthService) {}
 
@@ -18,13 +20,33 @@ export class AuthController {
 		return this.authService.register(dto);
 	}
 
+	@Post("verify-email")
+	async verifyEmail(@Body() dto: VerifyEmailDto) {
+		console.log(
+			"=====Just got inside verify email method of verify email controller",
+		);
+		return this.authService.verifyEmail(dto);
+	}
+
 	@Post("login")
-	login(@Body() dto: LoginDto) {
+	login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
 		console.log(
 			"=====Just got inside login method of login controller with email:",
 			dto.email,
 		);
-		return this.authService.login(dto);
+		return this.authService.login(dto, res);
+	}
+
+	@Post("refresh")
+	refresh(
+		@Body("refreshToken") token: string,
+		@Res({ passthrough: true }) res: Response,
+	) {
+		console.log(
+			"=====Just got inside refresh method of refresh controller with refresh token:",
+			token,
+		);
+		return this.authService.refresh(token, res);
 	}
 
 	@Post("forgot-password")

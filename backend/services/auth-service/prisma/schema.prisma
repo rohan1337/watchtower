@@ -22,15 +22,19 @@ enum Role {
 model User {
     id           String  @id @default(uuid())
     email        String  @unique
-    passwordHash String?
+    passwordHash String
     name         String?
     isActive     Boolean @default(true)
+    isVerified   Boolean @default(true)
+
+    refreshTokenHash String? // VERY important
 
     memberships Membership[]
 
-    createdAt DateTime  @default(now())
-    updatedAt DateTime  @updatedAt
-    deletedAt DateTime?
+    createdAt      DateTime        @default(now())
+    updatedAt      DateTime        @updatedAt
+    deletedAt      DateTime?
+    passwordResets PasswordReset[]
 }
 
 model Membership {
@@ -46,5 +50,28 @@ model Membership {
 
     @@unique([userId, tenantId])
     @@index([tenantId])
+    @@index([userId])
+}
+
+model EmailVerification {
+    id       String  @id @default(uuid())
+    email    String  @unique
+    name     String?
+    password String // hashed temporary password
+    token    String  @unique
+
+    expiresAt DateTime
+    createdAt DateTime @default(now())
+}
+
+model PasswordReset {
+    id        String   @id @default(uuid())
+    userId    String
+    tokenHash String   @unique
+    expiresAt DateTime
+    createdAt DateTime @default(now())
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
     @@index([userId])
 }
