@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { toast } from "sonner";
 import AuthLayout from "@/components/layouts/auth/AuthLayout";
 import AuthInput from "@/components/layouts/auth/AuthInput";
@@ -42,21 +41,34 @@ const RegisterPage = () => {
 		setLoading(true);
 		setErrors([]);
 
+		if (!formData.email || !formData.password) {
+			setErrors(["Email and password is required"]);
+			return;
+		}
+
 		try {
 			const res = await fetch(`${BASE_URL_AUTH_SER}/auth/register`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
 				},
+				credentials: "include",
 				body: JSON.stringify(formData),
 			});
 
+			// if (!res.ok) {
+			// 	const data = await res.json();
+			// 	throw new Error(JSON.stringify(data));
+			// }
+
 			if (!res.ok) {
 				const data = await res.json();
-				throw new Error(JSON.stringify(data));
+				setErrors([data.message || "Something went wrong"]);
+				return;
 			}
 
 			toast.success("Verification email sent!");
+			localStorage.setItem("pending_email", formData.email);
 			setFormData({ name: "", email: "", password: "" });
 			setShowPassword(false);
 			router.push("/email-sent");
@@ -82,7 +94,7 @@ const RegisterPage = () => {
 	return (
 		<AuthLayout
 			title="Create Your Watchtower Account"
-			subtitle="Start monitoring incidents and alerts for your team"
+			subtitle="Set up your personal access to Watchtower"
 		>
 			<form className="space-y-4" onSubmit={handleSubmit}>
 				<AuthInput

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
 	AlertTriangle,
 	Bell,
@@ -11,49 +11,43 @@ import {
 	ShieldAlert,
 } from "lucide-react";
 
-type NavItem = {
-	label: string;
-	href: (tenantId: string) => string;
-	icon: React.ReactNode;
+type Props = {
+	tenantId: string;
 };
 
-const Sidebar = () => {
+export default function Sidebar({ tenantId }: Props) {
 	const pathname = usePathname();
-	const params = useParams();
 
-	const tenantId = params?.tenantId as string;
-
-	const navItems: NavItem[] = [
+	const navItems = [
 		{
 			label: "Dashboard",
-			href: (t) => `/app/${t}/dashboard`,
+			href: `/${tenantId}/dashboard`,
 			icon: <LayoutDashboard size={18} />,
 		},
 		{
 			label: "Incidents",
-			href: (t) => `/app/${t}/incidents`,
+			href: `/${tenantId}/incidents`,
 			icon: <ShieldAlert size={18} />,
 		},
 		{
 			label: "Alerts",
-			href: (t) => `/app/${t}/alerts`,
+			href: `/${tenantId}/alerts`,
 			icon: <AlertTriangle size={18} />,
 		},
 		{
 			label: "Integrations",
-			href: (t) => `/app/${t}/integrations`,
+			href: `/${tenantId}/integrations`,
 			icon: <Plug size={18} />,
 		},
 		{
 			label: "Settings",
-			href: (t) => `/app/${t}/settings`,
+			href: `/${tenantId}/settings`,
 			icon: <Settings size={18} />,
 		},
 	];
 
 	return (
 		<aside className="flex h-screen w-64 flex-col border-r border-neutral-200 bg-white">
-			{/* Logo / Brand */}
 			<div className="flex h-16 items-center border-b border-neutral-200 px-6">
 				<Bell className="mr-2 text-red-600" />
 				<span className="text-lg font-semibold text-neutral-900">
@@ -61,34 +55,22 @@ const Sidebar = () => {
 				</span>
 			</div>
 
-			{/* Navigation */}
 			<nav className="flex-1 px-4 py-4">
 				<ul className="space-y-1">
 					{navItems.map((item) => {
-						const href = tenantId ? item.href(tenantId) : "#";
-						const isActive = pathname === href;
+						const isActive = pathname.startsWith(item.href);
 
 						return (
 							<li key={item.label}>
 								<Link
-									href={href}
-									className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors
-                    ${
-						isActive
-							? "bg-neutral-900 text-white"
-							: "text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900"
-					}
-                  `}
+									href={item.href}
+									className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+										isActive
+											? "bg-neutral-900 text-white"
+											: "text-neutral-700 hover:bg-neutral-100"
+									}`}
 								>
-									<span
-										className={`${
-											isActive
-												? "text-white"
-												: "text-neutral-500"
-										}`}
-									>
-										{item.icon}
-									</span>
+									{item.icon}
 									{item.label}
 								</Link>
 							</li>
@@ -96,18 +78,6 @@ const Sidebar = () => {
 					})}
 				</ul>
 			</nav>
-
-			{/* Footer / Tenant Info */}
-			<div className="border-t border-neutral-200 px-4 py-3 text-xs text-neutral-500">
-				<div className="flex items-center justify-between">
-					<span>Tenant</span>
-					<span className="font-medium text-neutral-800">
-						{tenantId ?? "—"}
-					</span>
-				</div>
-			</div>
 		</aside>
 	);
-};
-
-export default Sidebar;
+}

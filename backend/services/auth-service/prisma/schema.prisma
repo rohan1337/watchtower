@@ -25,7 +25,7 @@ model User {
     passwordHash String
     name         String?
     isActive     Boolean @default(true)
-    isVerified   Boolean @default(true)
+    isVerified   Boolean @default(false)
 
     refreshTokenHash String? // VERY important
 
@@ -37,13 +37,26 @@ model User {
     passwordResets PasswordReset[]
 }
 
+model Tenant {
+    id       String  @id @default(uuid())
+    name     String
+    slug     String  @unique
+    isActive Boolean @default(true)
+
+    memberships Membership[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
 model Membership {
     id       String @id @default(uuid())
     userId   String
-    tenantId String // foreign key by convention, not relation
+    tenantId String
     role     Role   @default(MEMBER)
 
-    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+    tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
@@ -55,23 +68,27 @@ model Membership {
 
 model EmailVerification {
     id       String  @id @default(uuid())
-    email    String  @unique
+    email    String
     name     String?
     password String // hashed temporary password
     token    String  @unique
 
     expiresAt DateTime
     createdAt DateTime @default(now())
+
+    @@index([token])
+    @@index([expiresAt])
 }
 
 model PasswordReset {
     id        String   @id @default(uuid())
     userId    String
-    tokenHash String   @unique
+    tokenHash String
     expiresAt DateTime
     createdAt DateTime @default(now())
 
     user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@index([userId])
+    @@index([expiresAt])
 }

@@ -8,6 +8,9 @@ import {
 import { Transform } from "class-transformer";
 
 export class ResetPasswordDto {
+	@Transform(({ value }) =>
+		typeof value === "string" ? value.trim() : value,
+	)
 	@IsUUID("4", { message: "Invalid reset token" })
 	@IsNotEmpty({ message: "Reset token is required" })
 	token: string;

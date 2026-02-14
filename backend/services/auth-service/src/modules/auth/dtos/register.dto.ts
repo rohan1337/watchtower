@@ -4,18 +4,14 @@ import {
 	IsOptional,
 	IsString,
 	Matches,
+	MaxLength,
 	MinLength,
 } from "class-validator";
 import { Transform } from "class-transformer";
 
 export class RegisterDto {
 	@IsOptional()
-	@Transform(({ value }) =>
-		typeof value === "string" ? value.trim() : value,
-	)
-	@Matches(/^(?!.* {2,})([A-Za-z]+(?: [A-Za-z]+)*)$/, {
-		message: "Name cannot contain multiple consecutive spaces",
-	})
+	@MaxLength(100, { message: "Name must be within 100 characters" })
 	@IsString({ message: "Name must be a string" })
 	name?: string;
 

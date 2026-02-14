@@ -5,6 +5,8 @@ import { PrismaService } from "../../database/prisma.service";
 import { CleanupService } from "./cleanup.service";
 import { ClientsModule, Transport } from "@nestjs/microservices";
 import { JwtModule } from "@nestjs/jwt";
+import { JwtStrategy } from "./strategies/jwt.strategy";
+import { PassportModule } from "@nestjs/passport";
 
 @Module({
 	imports: [
@@ -22,8 +24,9 @@ import { JwtModule } from "@nestjs/jwt";
 			secret: process.env.JWT_ACCESS_SECRET,
 			signOptions: { expiresIn: "15m" },
 		}),
+		PassportModule,
 	],
 	controllers: [AuthController],
-	providers: [AuthService, PrismaService, CleanupService],
+	providers: [AuthService, PrismaService, CleanupService, JwtStrategy],
 })
 export class AuthModule {}

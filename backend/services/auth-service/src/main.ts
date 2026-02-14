@@ -9,6 +9,7 @@ async function bootstrap() {
 	app.useGlobalPipes(
 		new ValidationPipe({
 			whitelist: true,
+			forbidNonWhitelisted: true,
 			stopAtFirstError: true, // THIS REPLICATES .bail()
 			transform: true, // REQUIRED FOR @Transform() TO WORK
 			exceptionFactory: (errors) => {

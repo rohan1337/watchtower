@@ -3,6 +3,7 @@ import {
 	Inject,
 	Injectable,
 	OnModuleInit,
+	UnauthorizedException,
 } from "@nestjs/common";
 import * as bcrypt from "bcrypt";
 import { PrismaService } from "../../database/prisma.service";
@@ -15,6 +16,7 @@ import { randomUUID } from "crypto";
 import { ClientProxy } from "@nestjs/microservices";
 import { JwtService } from "@nestjs/jwt";
 import { Response } from "express";
+import { SelectTenantDto } from "./dtos/select-tenant.dto";
 
 @Injectable()
 export class AuthService implements OnModuleInit {
@@ -24,15 +26,23 @@ export class AuthService implements OnModuleInit {
 		@Inject("EMAIL_SERVICE") private readonly emailClient: ClientProxy,
 	) {}
 
-	private generateAccessToken(userId: string) {
+	private generateAccessToken(
+		userId: string,
+		tenantId: string,
+		role: string,
+	) {
 		console.log("=====Just got inside generate access token function");
 
 		console.log(
-			"=====Generating access token with the help of jwt service where user id, jwt access secret, and expiry date of 15m is stored in access token",
+			"=====Generating access token with the help of jwt service where user id, tenant id, rolw, jwt access secret, and expiry date of 15m is stored in access token",
 		);
 
 		return this.jwtService.sign(
-			{ sub: userId },
+			{
+				sub: userId,
+				tenantId,
+				role,
+			},
 			{
 				secret: process.env.JWT_ACCESS_SECRET,
 				expiresIn: "15m",
@@ -40,15 +50,23 @@ export class AuthService implements OnModuleInit {
 		);
 	}
 
-	private generateRefreshToken(userId: string) {
+	private generateRefreshToken(
+		userId: string,
+		tenantId: string,
+		role: string,
+	) {
 		console.log("=====Just got inside generate refresh token function");
 
 		console.log(
-			"=====Generating refresh token with the help of jwt service where user id, jwt refresh secret, and expiry date of 7d is stored in refresh token",
+			"=====Generating refresh token with the help of jwt service where user id, tenant id, role, jwt refresh secret, and expiry date of 7d is stored in refresh token",
 		);
 
 		return this.jwtService.sign(
-			{ sub: userId },
+			{
+				sub: userId,
+				tenantId,
+				role,
+			},
 			{
 				secret: process.env.JWT_REFRESH_SECRET,
 				expiresIn: "7d",
@@ -59,6 +77,94 @@ export class AuthService implements OnModuleInit {
 	async onModuleInit() {
 		await this.emailClient.connect();
 		console.log("=====Email client connected to Redis");
+	}
+
+	private async issueAuthCookies(
+		res: Response,
+		userId: string,
+		tenantId?: string,
+		role?: string,
+	) {
+		console.log("=====Just got inside issue auth cookies model");
+
+		console.log(
+			"=====Initializing payload with sub which is user id, tenant id and role id",
+		);
+
+		const payload: any = { sub: userId };
+
+		if (tenantId && role) {
+			payload.tenantId = tenantId;
+			payload.role = role;
+		}
+
+		console.log("=====Payload initialized");
+
+		console.log(
+			"=====Generating access and refresh token with payload and different expiration times",
+		);
+
+		let accessToken: string;
+		let refreshToken: string;
+
+		if (tenantId && role) {
+			accessToken = this.generateAccessToken(userId, tenantId, role);
+			refreshToken = this.generateRefreshToken(userId, tenantId, role);
+		} else {
+			// Identity-level token (no tenant context)
+			accessToken = this.jwtService.sign(
+				{ sub: userId },
+				{
+					secret: process.env.JWT_ACCESS_SECRET,
+					expiresIn: "15m",
+				},
+			);
+
+			refreshToken = this.jwtService.sign(
+				{ sub: userId },
+				{
+					secret: process.env.JWT_REFRESH_SECRET,
+					expiresIn: "7d",
+				},
+			);
+		}
+
+		console.log("=====Generated access and refresh token");
+
+		console.log("=====Hashing refresh token");
+
+		const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
+
+		console.log("=====Refresh token hashed");
+
+		console.log("=====Updating refresh token hash in user table");
+
+		await this.prisma.user.update({
+			where: { id: userId },
+			data: { refreshTokenHash },
+		});
+
+		console.log("=====User table updated");
+
+		console.log(
+			"=====Generating access and refresh token cookies with http only true, same site lax, not secure, and variable max age",
+		);
+
+		res.cookie("access_token", accessToken, {
+			httpOnly: true,
+			sameSite: "lax",
+			secure: false,
+			maxAge: 15 * 60 * 1000,
+		});
+
+		res.cookie("refresh_token", refreshToken, {
+			httpOnly: true,
+			sameSite: "lax",
+			secure: false,
+			maxAge: 7 * 24 * 60 * 60 * 1000,
+		});
+
+		console.log("=====Generated access and refresh token cookies");
 	}
 
 	async register(dto: RegisterDto) {
@@ -96,15 +202,13 @@ export class AuthService implements OnModuleInit {
 			"=====Before registering user, sending verification email to user's email, saving user temporarily to email verification table and setting expiration time to 30m",
 		);
 
-		await this.prisma.emailVerification.upsert({
+		await this.prisma.emailVerification.deleteMany({
 			where: { email: dto.email },
-			update: {
-				name: dto.name,
-				password: hashedPassword,
-				token,
-				expiresAt: new Date(Date.now() + 30 * 60 * 1000), // 30 minutes
-			},
-			create: {
+		});
+
+		// Create new verification entry
+		await this.prisma.emailVerification.create({
+			data: {
 				email: dto.email,
 				name: dto.name,
 				password: hashedPassword,
@@ -134,7 +238,7 @@ export class AuthService implements OnModuleInit {
 		return { success: true, message: "Verification email sent" };
 	}
 
-	async verifyEmail(dto: VerifyEmailDto) {
+	async verifyEmail(dto: VerifyEmailDto, res: Response) {
 		console.log(
 			"=====Just got inside verify email method of verify email service",
 		);
@@ -165,10 +269,23 @@ export class AuthService implements OnModuleInit {
 
 		console.log("=====Verification token is not expired");
 
+		console.log(
+			"=====Checking if the user exists as two verification processes may happen simultaneously and can create two duplicate users",
+		);
+
+		const existing = await this.prisma.user.findUnique({
+			where: { email: pending.email },
+		});
+
+		if (existing) {
+			throw new BadRequestException("User already verified");
+		}
+
+		console.log("=====User doesn't exists");
+
 		console.log("=====Registering user now in user table");
 
-		// Create the real user now
-		await this.prisma.user.create({
+		const user = await this.prisma.user.create({
 			data: {
 				email: pending.email,
 				name: pending.name,
@@ -188,6 +305,12 @@ export class AuthService implements OnModuleInit {
 		});
 
 		console.log("=====Temporary user data deleted");
+
+		console.log("=====Generating access token");
+
+		await this.issueAuthCookies(res, user.id);
+
+		console.log("=====Access token generated");
 
 		return { success: true };
 	}
@@ -219,59 +342,60 @@ export class AuthService implements OnModuleInit {
 
 		console.log("=====Password is valid");
 
-		console.log("=====Generating access and refresh token");
+		console.log("=====Checking if the user has tenant memberships or not");
 
-		const accessToken = this.generateAccessToken(user.id);
-		const refreshToken = this.generateRefreshToken(user.id);
-
-		console.log("=====Access and refresh token generated");
-
-		// Store hashed refresh token
-		const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
-
-		console.log(
-			"=====Refresh token is hashed and is going to be updated in the user table",
-		);
-
-		await this.prisma.user.update({
-			where: { id: user.id },
-			data: { refreshTokenHash },
+		const memberships = await this.prisma.membership.findMany({
+			where: { userId: user.id },
+			include: {
+				tenant: true,
+			},
 		});
-
-		console.log("=====Refresh token is updated in user table");
-
-		console.log(
-			"=====Generating cookies to be stored in frontend with the help of access and refresh token which are http only, same site is lax",
-		);
-
-		// 🔐 Cookies
-		res.cookie("access_token", accessToken, {
-			httpOnly: true,
-			sameSite: "lax",
-			secure: false, // true in production
-			maxAge: 15 * 60 * 1000, // 15 mins
-		});
-
-		res.cookie("refresh_token", refreshToken, {
-			httpOnly: true,
-			sameSite: "lax",
-			secure: false,
-			maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-		});
-
-		console.log(
-			"=====Generated access token (validity 15m) and refresh token (validity 7d) cookies",
-		);
 
 		return {
-			accessToken,
-			refreshToken,
 			user: {
 				id: user.id,
 				email: user.email,
 				name: user.name,
 			},
+			tenants: memberships.map((m) => ({
+				tenantId: m.tenantId,
+				name: m.tenant.name,
+				role: m.role,
+			})),
 		};
+	}
+
+	async selectTenant(userId: string, tenantId: string, res: Response) {
+		console.log(
+			"=====Just got inside select tenant method of selecte tenant service",
+		);
+
+		console.log(
+			"=====Checking if any membership exists based on user id and tenant id",
+		);
+
+		const membership = await this.prisma.membership.findFirst({
+			where: {
+				userId,
+				tenantId,
+			},
+		});
+
+		if (!membership) {
+			throw new BadRequestException("Invalid tenant selection");
+		}
+
+		console.log("=====Membership exists");
+
+		console.log("=====Generating access and refresh tokens");
+
+		await this.issueAuthCookies(res, userId, tenantId, membership.role);
+
+		console.log("=====Generated access and refresh tokens");
+
+		console.log("=====Returning access and refresh tokens to the frontend");
+
+		return { success: true };
 	}
 
 	async refresh(refreshToken: string, res: Response) {
@@ -284,9 +408,15 @@ export class AuthService implements OnModuleInit {
 			"=====Verifying the refresh token with the help of refresh token secret",
 		);
 
-		const payload = this.jwtService.verify(refreshToken, {
-			secret: process.env.JWT_REFRESH_SECRET,
-		});
+		let payload: any;
+
+		try {
+			payload = this.jwtService.verify(refreshToken, {
+				secret: process.env.JWT_REFRESH_SECRET,
+			});
+		} catch {
+			throw new UnauthorizedException("Invalid refresh token");
+		}
 
 		console.log("=====Refresh token verified");
 
@@ -324,24 +454,33 @@ export class AuthService implements OnModuleInit {
 			"=====Refresh token matched with the stored refresh token in user table",
 		);
 
-		console.log("=====New access token is getting generated");
+		console.log("=====Checking if the user has tenant membership or not");
 
-		const newAccessToken = this.generateAccessToken(user.id);
-
-		console.log("=====New access token is generated");
-
-		console.log(
-			"=====Generating cookie to be stored in frontend with the help of access token which is http only, same site is lax",
-		);
-
-		res.cookie("access_token", newAccessToken, {
-			httpOnly: true,
-			sameSite: "lax",
-			secure: false,
-			maxAge: 15 * 60 * 1000,
+		const membership = await this.prisma.membership.findFirst({
+			where: {
+				userId: payload.sub,
+				tenantId: payload.tenantId,
+			},
 		});
 
-		console.log("=====Generated access token (validity 15m) cookie");
+		if (!membership) {
+			throw new BadRequestException("User has no tenant membership");
+		}
+
+		console.log("=====User has tenant membership");
+
+		console.log(
+			"=====Going to issue auth cookies method for generating access and refresh token",
+		);
+
+		await this.issueAuthCookies(
+			res,
+			user.id,
+			payload.tenantId,
+			membership.role,
+		);
+
+		console.log("=====Came back from issue auth cookies method");
 
 		return { success: true };
 	}
@@ -464,5 +603,70 @@ export class AuthService implements OnModuleInit {
 		console.log("=====User data deleted from password reset table");
 
 		return { success: true };
+	}
+
+	async logout(userId: string, res: Response) {
+		console.log("=====Just got inside logout model in logout service");
+
+		console.log(
+			"=====Updating the refresh token hash to null in user table",
+		);
+
+		await this.prisma.user.update({
+			where: { id: userId },
+			data: { refreshTokenHash: null },
+		});
+
+		console.log("=====Updated user table");
+
+		console.log(
+			"=====Clearing access and refresh token cookies from client side",
+		);
+
+		// Clear cookies
+		res.clearCookie("access_token");
+		res.clearCookie("refresh_token");
+
+		console.log("=====Cleared both access and refresh token cookies");
+
+		return { success: true };
+	}
+
+	async me(userId: string) {
+		console.log("=====Just got inside me model of me service");
+
+		console.log("=====Finding out user with userId");
+
+		const user = await this.prisma.user.findUnique({
+			where: { id: userId },
+			include: {
+				memberships: {
+					include: {
+						tenant: true,
+					},
+				},
+			},
+		});
+
+		if (!user) {
+			throw new UnauthorizedException("You are not authorized");
+		}
+
+		console.log(
+			"=====Got the unique user with tenants and sending the data to frontend",
+		);
+
+		return {
+			user: {
+				id: user.id,
+				email: user.email,
+				name: user.name,
+				tenants: user.memberships.map((m) => ({
+					id: m.tenantId,
+					name: m.tenant.name,
+					role: m.role,
+				})),
+			},
+		};
 	}
 }

@@ -3,6 +3,9 @@ import { Transform } from "class-transformer";
 
 export class ForgotPasswordDto {
 	@Transform(({ value }) =>
+		typeof value === "string" ? value.trim().toLowerCase() : value,
+	)
+	@Transform(({ value }) =>
 		typeof value === "string" ? value.trim() : value,
 	)
 	@Matches(/^\S+$/, { message: "Email cannot contain spaces" })

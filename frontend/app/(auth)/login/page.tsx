@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import AuthLayout from "@/components/layouts/auth/AuthLayout";
 import AuthInput from "@/components/layouts/auth/AuthInput";
 import AuthPasswordInput from "@/components/layouts/auth/AuthPasswordInput";
@@ -40,6 +39,11 @@ const LoginPage = () => {
 		setLoading(true);
 		setErrors([]);
 
+		if (!formData.email || !formData.password) {
+			setErrors(["Email and password is required"]);
+			return;
+		}
+
 		try {
 			const res = await fetch(`${BASE_URL_AUTH_SER}/auth/login`, {
 				method: "POST",
@@ -48,15 +52,22 @@ const LoginPage = () => {
 				body: JSON.stringify(formData),
 			});
 
+			// if (!res.ok) {
+			// 	const data = await res.json();
+			// 	throw new Error(JSON.stringify(data));
+			// }
+
 			if (!res.ok) {
 				const data = await res.json();
-				throw new Error(JSON.stringify(data));
+				setErrors([data.message || "Invalid credentials"]);
+				return;
 			}
 
-			toast.success("Logged in successfully!");
 			setFormData({ email: "", password: "" });
 			setShowPassword(false);
-			router.push("/dashboard");
+
+			// Redirect to onboarding
+			router.replace("/onboarding");
 		} catch (err: any) {
 			try {
 				const parsed = JSON.parse(err.message);
