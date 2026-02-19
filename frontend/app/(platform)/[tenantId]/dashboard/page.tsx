@@ -1,38 +1,29 @@
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+"use client";
 
-const BASE_URL_AUTH_SER = process.env.NEXT_PUBLIC_API_BASE_URL_AUTH_SER;
+import { useTenant } from "@/app/contexts/tenant-context/TenantContext";
+import KPISection from "@/components/dashboard/KPISection";
+import SeveritySection from "@/components/dashboard/SeveritySection";
+import RecentIncidents from "@/components/dashboard/RecentIncidents";
 
-export default async function DashboardPage({
-	params,
-}: {
-	params: { tenantId: string };
-}) {
-	const cookieStore = cookies();
-
-	const res = await fetch(`${BASE_URL_AUTH_SER}/auth/me`, {
-		headers: {
-			Cookie: cookieStore.toString(),
-		},
-		cache: "no-store",
-	});
-
-	if (!res.ok) {
-		redirect("/login");
-	}
-
-	const data = await res.json();
-
-	const tenant = data.user.tenants.find((t: any) => t.id === params.tenantId);
-
-	if (!tenant) {
-		redirect("/select-tenant");
-	}
+export default function DashboardPage() {
+	const { tenant } = useTenant();
 
 	return (
-		<div>
-			<h1 className="text-2xl font-semibold">Welcome to {tenant.name}</h1>
-			<p className="text-neutral-600 mt-2">Role: {tenant.role}</p>
+		<div className="space-y-8">
+			{/* Header */}
+			<div>
+				<h1 className="text-2xl font-semibold text-neutral-900">
+					Welcome to {tenant.name}
+				</h1>
+				<p className="text-neutral-600 mt-1">
+					Overview of your incident and alert activity
+				</p>
+			</div>
+
+			{/* Sections */}
+			<KPISection />
+			<SeveritySection />
+			<RecentIncidents />
 		</div>
 	);
 }

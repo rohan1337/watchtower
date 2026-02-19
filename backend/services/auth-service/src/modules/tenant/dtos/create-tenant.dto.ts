@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, MinLength } from "class-validator";
+import { IsIn, IsNotEmpty, IsString, MinLength } from "class-validator";
 import { Transform } from "class-transformer";
 
 export class CreateTenantDto {
@@ -9,4 +9,10 @@ export class CreateTenantDto {
 	@MinLength(2, { message: "Workspace name must be at least 2 characters" })
 	@IsNotEmpty({ message: "Workspace name is required" })
 	name: string;
+
+	@IsIn(["1-10", "10-50", "50-200", "200+"], {
+		message: "Invalid team size option",
+	})
+	@IsNotEmpty({ message: "Team size is required" })
+	teamSize: string;
 }

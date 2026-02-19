@@ -47,8 +47,8 @@ export default function Sidebar({ tenantId }: Props) {
 	];
 
 	return (
-		<aside className="flex h-screen w-64 flex-col border-r border-neutral-200 bg-white">
-			<div className="flex h-16 items-center border-b border-neutral-200 px-6">
+		<aside className="flex h-screen w-64 flex-col border-r border-neutral-700 bg-white shadow-sm">
+			<div className="flex h-16 items-center px-6">
 				<Bell className="mr-2 text-red-600" />
 				<span className="text-lg font-semibold text-neutral-900">
 					Watchtower

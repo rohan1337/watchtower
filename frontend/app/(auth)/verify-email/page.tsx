@@ -55,15 +55,15 @@ export default function VerifyEmailPage() {
 
 	if (loading) {
 		return (
-			<div className="h-screen flex items-center justify-center">
-				<p className="text-neutral-700">Verifying email…</p>
+			<div className="h-screen bg-neutral-100 flex items-center justify-center">
+				<p className="text-neutral-900">Verifying email…</p>
 			</div>
 		);
 	}
 
 	if (error) {
 		return (
-			<div className="h-screen flex items-center justify-center">
+			<div className="h-screen bg-neutral-100 flex items-center justify-center">
 				<p className="text-red-600">{error}</p>
 			</div>
 		);

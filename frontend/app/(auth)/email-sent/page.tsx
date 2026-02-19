@@ -15,15 +15,17 @@ export default function EmailSentPage() {
 	return (
 		<div className="h-screen bg-neutral-100 flex items-center justify-center">
 			<div className="bg-white p-6 shadow rounded w-100 text-center">
-				<h2 className="text-xl text-neutral-700 font-semibold">
+				<h2 className="text-xl text-neutral-900 font-semibold">
 					Check your email
 				</h2>
 
-				<p className="text-neutral-600 mt-3">
+				<p className="text-sm text-neutral-600 mt-3">
 					{email ? (
 						<>
 							A verification link has been sent to{" "}
-							<span className="font-semibold">{email}</span>.
+							<span className="font-semibold text-neutral-900">
+								{email}
+							</span>
 						</>
 					) : (
 						"A verification link has been sent to your email."
@@ -33,9 +35,9 @@ export default function EmailSentPage() {
 				<div className="mt-6">
 					<button
 						onClick={() => router.push("/login")}
-						className="text-sm text-neutral-600 hover:text-neutral-900"
+						className="text-sm text-neutral-900 cursor-pointer hover:underline"
 					>
-						Back to login
+						Back to Login
 					</button>
 				</div>
 			</div>

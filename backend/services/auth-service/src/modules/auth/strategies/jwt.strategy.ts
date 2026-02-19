@@ -3,10 +3,14 @@ import { PassportStrategy } from "@nestjs/passport";
 import { ExtractJwt, Strategy } from "passport-jwt";
 import { PrismaService } from "../../../database/prisma.service";
 import { Request } from "express";
+import { PinoLogger } from "nestjs-pino";
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-	constructor(private prisma: PrismaService) {
+	constructor(
+		private prisma: PrismaService,
+		private readonly logger: PinoLogger,
+	) {
 		super({
 			jwtFromRequest: ExtractJwt.fromExtractors([
 				(req: Request) => req?.cookies?.access_token,
@@ -14,6 +18,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 			ignoreExpiration: false,
 			secretOrKey: process.env.JWT_ACCESS_SECRET,
 		});
+		this.logger.setContext(JwtStrategy.name);
 	}
 
 	async validate(payload: any) {
@@ -25,20 +30,31 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 		});
 
 		if (!user) {
+			this.logger.warn(
+				{ userId: payload.sub },
+				"JWT validation failed: user does not exist",
+			);
 			throw new UnauthorizedException("User no longer exists");
 		}
 
-		if (!user || !user.isActive) {
+		if (!user.isActive) {
+			this.logger.warn(
+				{ userId: user.id },
+				"JWT validation failed: inactive user",
+			);
 			throw new UnauthorizedException();
 		}
 
-		// Optional: validate tenant context
 		if (payload.tenantId) {
 			const membership = user.memberships.find(
 				(m) => m.tenantId === payload.tenantId,
 			);
 
 			if (!membership) {
+				this.logger.warn(
+					{ userId: user.id, tenantId: payload.tenantId },
+					"JWT validation failed: invalid tenant access",
+				);
 				throw new UnauthorizedException("Invalid tenant access");
 			}
 
@@ -49,7 +65,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 			};
 		}
 
-		// Identity-level token
 		return {
 			sub: user.id,
 		};

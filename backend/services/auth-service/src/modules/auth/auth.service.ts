@@ -16,7 +16,18 @@ import { randomUUID } from "crypto";
 import { ClientProxy } from "@nestjs/microservices";
 import { JwtService } from "@nestjs/jwt";
 import { Response } from "express";
-import { SelectTenantDto } from "./dtos/select-tenant.dto";
+import { PinoLogger } from "nestjs-pino";
+import { Prisma } from "@prisma/client";
+import { randomBytes, createHash } from "crypto";
+import { Membership } from "@prisma/client";
+
+type ResetWithUser = Prisma.PasswordResetGetPayload<{
+	include: { user: true };
+}>;
+
+let resetEntry: ResetWithUser | null = null;
+
+const rawToken = randomBytes(32).toString("hex");
 
 @Injectable()
 export class AuthService implements OnModuleInit {
@@ -24,19 +35,25 @@ export class AuthService implements OnModuleInit {
 		private readonly prisma: PrismaService,
 		private readonly jwtService: JwtService,
 		@Inject("EMAIL_SERVICE") private readonly emailClient: ClientProxy,
-	) {}
+		private readonly logger: PinoLogger,
+	) {
+		this.logger.setContext(AuthService.name);
+	}
+
+	async onModuleInit() {
+		await this.emailClient.connect();
+		this.logger.info("Email service connected");
+	}
+
+	// =========================
+	// TOKEN GENERATION
+	// =========================
 
 	private generateAccessToken(
 		userId: string,
-		tenantId: string,
-		role: string,
+		tenantId?: string,
+		role?: string,
 	) {
-		console.log("=====Just got inside generate access token function");
-
-		console.log(
-			"=====Generating access token with the help of jwt service where user id, tenant id, rolw, jwt access secret, and expiry date of 15m is stored in access token",
-		);
-
 		return this.jwtService.sign(
 			{
 				sub: userId,
@@ -52,15 +69,9 @@ export class AuthService implements OnModuleInit {
 
 	private generateRefreshToken(
 		userId: string,
-		tenantId: string,
-		role: string,
+		tenantId?: string,
+		role?: string,
 	) {
-		console.log("=====Just got inside generate refresh token function");
-
-		console.log(
-			"=====Generating refresh token with the help of jwt service where user id, tenant id, role, jwt refresh secret, and expiry date of 7d is stored in refresh token",
-		);
-
 		return this.jwtService.sign(
 			{
 				sub: userId,
@@ -74,81 +85,23 @@ export class AuthService implements OnModuleInit {
 		);
 	}
 
-	async onModuleInit() {
-		await this.emailClient.connect();
-		console.log("=====Email client connected to Redis");
-	}
-
 	private async issueAuthCookies(
 		res: Response,
 		userId: string,
 		tenantId?: string,
 		role?: string,
 	) {
-		console.log("=====Just got inside issue auth cookies model");
+		this.logger.debug({ userId, tenantId }, "Issuing auth cookies");
 
-		console.log(
-			"=====Initializing payload with sub which is user id, tenant id and role id",
-		);
-
-		const payload: any = { sub: userId };
-
-		if (tenantId && role) {
-			payload.tenantId = tenantId;
-			payload.role = role;
-		}
-
-		console.log("=====Payload initialized");
-
-		console.log(
-			"=====Generating access and refresh token with payload and different expiration times",
-		);
-
-		let accessToken: string;
-		let refreshToken: string;
-
-		if (tenantId && role) {
-			accessToken = this.generateAccessToken(userId, tenantId, role);
-			refreshToken = this.generateRefreshToken(userId, tenantId, role);
-		} else {
-			// Identity-level token (no tenant context)
-			accessToken = this.jwtService.sign(
-				{ sub: userId },
-				{
-					secret: process.env.JWT_ACCESS_SECRET,
-					expiresIn: "15m",
-				},
-			);
-
-			refreshToken = this.jwtService.sign(
-				{ sub: userId },
-				{
-					secret: process.env.JWT_REFRESH_SECRET,
-					expiresIn: "7d",
-				},
-			);
-		}
-
-		console.log("=====Generated access and refresh token");
-
-		console.log("=====Hashing refresh token");
+		const accessToken = this.generateAccessToken(userId, tenantId, role);
+		const refreshToken = this.generateRefreshToken(userId, tenantId, role);
 
 		const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
-
-		console.log("=====Refresh token hashed");
-
-		console.log("=====Updating refresh token hash in user table");
 
 		await this.prisma.user.update({
 			where: { id: userId },
 			data: { refreshTokenHash },
 		});
-
-		console.log("=====User table updated");
-
-		console.log(
-			"=====Generating access and refresh token cookies with http only true, same site lax, not secure, and variable max age",
-		);
 
 		res.cookie("access_token", accessToken, {
 			httpOnly: true,
@@ -163,50 +116,34 @@ export class AuthService implements OnModuleInit {
 			secure: false,
 			maxAge: 7 * 24 * 60 * 60 * 1000,
 		});
-
-		console.log("=====Generated access and refresh token cookies");
 	}
 
-	async register(dto: RegisterDto) {
-		console.log(
-			"=====Just got inside register method of register service with email:",
-			dto.email,
-		);
+	// =========================
+	// REGISTER
+	// =========================
 
-		console.log(
-			"=====Checking if the user exists or not with the help of email",
-		);
+	async register(dto: RegisterDto) {
+		this.logger.info({ email: dto.email }, "Registration initiated");
 
 		const existingUser = await this.prisma.user.findUnique({
 			where: { email: dto.email },
 		});
 
 		if (existingUser) {
+			this.logger.warn(
+				{ email: dto.email },
+				"Registration failed: email exists",
+			);
 			throw new BadRequestException("Email already registered");
 		}
 
-		console.log("=====User is not registered");
-
-		console.log(
-			"=====Generating token that consists random uuid and hashed password",
-		);
-
 		const token = randomUUID();
 		const hashedPassword = await bcrypt.hash(dto.password, 10);
-
-		console.log(
-			"=====Generated random uuid and hashed password which is to be stored for temporary basis",
-		);
-
-		console.log(
-			"=====Before registering user, sending verification email to user's email, saving user temporarily to email verification table and setting expiration time to 30m",
-		);
 
 		await this.prisma.emailVerification.deleteMany({
 			where: { email: dto.email },
 		});
 
-		// Create new verification entry
 		await this.prisma.emailVerification.create({
 			data: {
 				email: dto.email,
@@ -217,73 +154,43 @@ export class AuthService implements OnModuleInit {
 			},
 		});
 
-		// Send email later through notification service
-		console.log(
-			"=====Verification link:",
-			`http://localhost:3000/verify?token=${token}`,
-		);
-
-		console.log(
-			"=====Emitting send_email signal and template type to be VERIFY_EMAIL to notification service",
-		);
-
 		this.emailClient.emit("send_email", {
 			email: dto.email,
 			token,
 			template: "VERIFY_EMAIL",
 		});
 
-		console.log("=====Verification email sent to the user");
+		this.logger.info({ email: dto.email }, "Verification email sent");
 
 		return { success: true, message: "Verification email sent" };
 	}
 
+	// =========================
+	// VERIFY EMAIL
+	// =========================
+
 	async verifyEmail(dto: VerifyEmailDto, res: Response) {
-		console.log(
-			"=====Just got inside verify email method of verify email service",
-		);
-
-		console.log(
-			"=====Checking if the user exists in the email verification table with the help of token",
-		);
-
 		const { token } = dto;
 
 		const pending = await this.prisma.emailVerification.findUnique({
 			where: { token },
 		});
 
-		console.log(
-			"=====Temporary user found who is stored in email verification table",
-		);
-
-		console.log(
-			"=====Checking if the verification token is expired or not",
-		);
-
 		if (!pending || pending.expiresAt < new Date()) {
+			this.logger.warn("Invalid or expired email verification token");
 			throw new BadRequestException(
 				"Invalid or expired verification token",
 			);
 		}
-
-		console.log("=====Verification token is not expired");
-
-		console.log(
-			"=====Checking if the user exists as two verification processes may happen simultaneously and can create two duplicate users",
-		);
 
 		const existing = await this.prisma.user.findUnique({
 			where: { email: pending.email },
 		});
 
 		if (existing) {
+			this.logger.warn({ email: pending.email }, "User already verified");
 			throw new BadRequestException("User already verified");
 		}
-
-		console.log("=====User doesn't exists");
-
-		console.log("=====Registering user now in user table");
 
 		const user = await this.prisma.user.create({
 			data: {
@@ -293,35 +200,23 @@ export class AuthService implements OnModuleInit {
 			},
 		});
 
-		console.log("=====User is registered in user table");
-
-		console.log(
-			"=====Deleting the user data from email verification table",
-		);
-
-		// Delete the temp entry
 		await this.prisma.emailVerification.delete({
 			where: { id: pending.id },
 		});
 
-		console.log("=====Temporary user data deleted");
-
-		console.log("=====Generating access token");
-
 		await this.issueAuthCookies(res, user.id);
 
-		console.log("=====Access token generated");
+		this.logger.info({ userId: user.id }, "Email verified successfully");
 
 		return { success: true };
 	}
 
-	async login(dto: LoginDto, res: Response) {
-		console.log(
-			"=====Just got inside login method of login service with email:",
-			dto.email,
-		);
+	// =========================
+	// LOGIN
+	// =========================
 
-		console.log("=====Finding the user with the help of email");
+	async login(dto: LoginDto, res: Response) {
+		this.logger.info({ email: dto.email }, "Login attempt");
 
 		const user = await this.prisma.user.findUnique({
 			where: { email: dto.email },
@@ -331,25 +226,19 @@ export class AuthService implements OnModuleInit {
 			throw new BadRequestException("Invalid credentials");
 		}
 
-		console.log("=====User found");
-
-		console.log("=====Checking if the password provided is valid or not");
-
 		const isValid = await bcrypt.compare(dto.password, user.passwordHash);
+
 		if (!isValid) {
 			throw new BadRequestException("Invalid credentials");
 		}
 
-		console.log("=====Password is valid");
-
-		console.log("=====Checking if the user has tenant memberships or not");
-
 		const memberships = await this.prisma.membership.findMany({
 			where: { userId: user.id },
-			include: {
-				tenant: true,
-			},
+			include: { tenant: true },
 		});
+
+		// 🔥 ISSUE TEMP TOKEN (NO TENANT)
+		await this.issueAuthCookies(res, user.id);
 
 		return {
 			user: {
@@ -358,55 +247,40 @@ export class AuthService implements OnModuleInit {
 				name: user.name,
 			},
 			tenants: memberships.map((m) => ({
-				tenantId: m.tenantId,
+				id: m.tenantId,
 				name: m.tenant.name,
 				role: m.role,
 			})),
 		};
 	}
 
-	async selectTenant(userId: string, tenantId: string, res: Response) {
-		console.log(
-			"=====Just got inside select tenant method of selecte tenant service",
-		);
+	// =========================
+	// SELECT WORKSPACE
+	// =========================
 
-		console.log(
-			"=====Checking if any membership exists based on user id and tenant id",
-		);
-
+	async selectWorkspace(userId: string, tenantId: string, res: Response) {
 		const membership = await this.prisma.membership.findFirst({
-			where: {
-				userId,
-				tenantId,
-			},
+			where: { userId, tenantId },
 		});
 
 		if (!membership) {
+			this.logger.warn({ userId, tenantId }, "Invalid tenant selection");
 			throw new BadRequestException("Invalid tenant selection");
 		}
 
-		console.log("=====Membership exists");
-
-		console.log("=====Generating access and refresh tokens");
-
 		await this.issueAuthCookies(res, userId, tenantId, membership.role);
 
-		console.log("=====Generated access and refresh tokens");
-
-		console.log("=====Returning access and refresh tokens to the frontend");
+		this.logger.info({ userId, tenantId }, "Tenant selected");
 
 		return { success: true };
 	}
 
-	async refresh(refreshToken: string, res: Response) {
-		console.log(
-			"=====Just got inside refresh method of refresh service with refresh token:",
-			refreshToken,
-		);
+	// =========================
+	// REFRESH
+	// =========================
 
-		console.log(
-			"=====Verifying the refresh token with the help of refresh token secret",
-		);
+	async refresh(refreshToken: string, res: Response) {
+		this.logger.info("Refresh token request received");
 
 		let payload: any;
 
@@ -415,123 +289,83 @@ export class AuthService implements OnModuleInit {
 				secret: process.env.JWT_REFRESH_SECRET,
 			});
 		} catch {
+			this.logger.warn("Invalid refresh token signature");
 			throw new UnauthorizedException("Invalid refresh token");
 		}
-
-		console.log("=====Refresh token verified");
-
-		console.log(
-			"=====Checking if the user exists with the help of user id stored in refresh token",
-		);
 
 		const user = await this.prisma.user.findUnique({
 			where: { id: payload.sub },
 		});
 
-		console.log("=====User is found");
-
-		console.log(
-			"=====Checking if the user and the refresh token of the user exists in user table",
-		);
-
 		if (!user || !user.refreshTokenHash) {
+			this.logger.warn(
+				{ userId: payload.sub },
+				"Refresh failed: user not found",
+			);
 			throw new BadRequestException("Invalid refresh token");
 		}
-
-		console.log("=====User and refresh token in the user table exists");
-
-		console.log(
-			"=====Checking if the refresh token is valid or not by comparing it with stored refresh token in user table",
-		);
 
 		const valid = await bcrypt.compare(refreshToken, user.refreshTokenHash);
 
 		if (!valid) {
+			this.logger.warn(
+				{ userId: user.id },
+				"Refresh failed: token mismatch",
+			);
 			throw new BadRequestException("Invalid refresh token");
 		}
 
-		console.log(
-			"=====Refresh token matched with the stored refresh token in user table",
-		);
+		let membership: Membership | null = null;
 
-		console.log("=====Checking if the user has tenant membership or not");
+		if (payload.tenantId) {
+			membership = await this.prisma.membership.findFirst({
+				where: {
+					userId: payload.sub,
+					tenantId: payload.tenantId,
+				},
+			});
 
-		const membership = await this.prisma.membership.findFirst({
-			where: {
-				userId: payload.sub,
-				tenantId: payload.tenantId,
-			},
-		});
-
-		if (!membership) {
-			throw new BadRequestException("User has no tenant membership");
+			if (!membership) {
+				throw new BadRequestException("Invalid tenant context");
+			}
 		}
-
-		console.log("=====User has tenant membership");
-
-		console.log(
-			"=====Going to issue auth cookies method for generating access and refresh token",
-		);
 
 		await this.issueAuthCookies(
 			res,
 			user.id,
 			payload.tenantId,
-			membership.role,
+			membership?.role,
 		);
 
-		console.log("=====Came back from issue auth cookies method");
+		this.logger.info({ userId: user.id }, "Tokens refreshed");
 
 		return { success: true };
 	}
 
-	async forgotPassword(dto: ForgotPasswordDto) {
-		console.log(
-			"=====Just got inside forgot password method of forgot password service with email:",
-			dto.email,
-		);
+	// =========================
+	// FORGOT PASSWORD
+	// =========================
 
-		console.log(
-			"=====Checking if the user exists with the given email or else return",
-		);
+	async forgotPassword(dto: ForgotPasswordDto) {
+		this.logger.info({ email: dto.email }, "Password reset requested");
 
 		const user = await this.prisma.user.findUnique({
 			where: { email: dto.email },
 		});
 
-		// Always return success (anti-enumeration)
-		if (!user) {
-			return { success: true };
-		}
+		if (!user) return { success: true };
 
-		console.log("=====User doesn't exists");
+		const rawToken = randomBytes(32).toString("hex");
 
-		console.log(
-			"=====Generating random uuid raw token and hashing it after",
-		);
-
-		const rawToken = randomUUID();
-		const tokenHash = await bcrypt.hash(rawToken, 10);
-
-		console.log("=====Token is hashed");
-
-		console.log(
-			"=====Saving the user details with hashed token in password reset table before sending the token to the client through mail to check if the user is a valid user or not",
-		);
+		const tokenHash = createHash("sha256").update(rawToken).digest("hex");
 
 		await this.prisma.passwordReset.create({
 			data: {
 				userId: user.id,
 				tokenHash,
-				expiresAt: new Date(Date.now() + 30 * 60 * 1000), // 30 min
+				expiresAt: new Date(Date.now() + 30 * 60 * 1000),
 			},
 		});
-
-		console.log("=====User data is saved in password reset table");
-
-		console.log(
-			"=====Emitting send_email signal and template type to be RESET_PASSWORD to notification service",
-		);
 
 		this.emailClient.emit("send_email", {
 			email: user.email,
@@ -539,111 +373,76 @@ export class AuthService implements OnModuleInit {
 			template: "RESET_PASSWORD",
 		});
 
-		console.log("=====Reset password email sent to the user");
+		this.logger.info({ userId: user.id }, "Password reset email sent");
 
 		return { success: true };
 	}
 
+	// =========================
+	// RESET PASSWORD
+	// =========================
+
 	async resetPassword(dto: ResetPasswordDto) {
-		console.log(
-			"=====Just got inside reset password method of reset password service reset token:",
-			dto.token,
-		);
+		this.logger.info("Password reset attempt");
 
-		console.log(
-			"=====Checking if the password reset request expired or not in password reset table",
-		);
+		const tokenHash = createHash("sha256").update(dto.token).digest("hex");
 
-		const resets = await this.prisma.passwordReset.findMany({
-			where: { expiresAt: { gt: new Date() } },
-			include: { user: true },
+		const resetEntry = await this.prisma.passwordReset.findUnique({
+			where: { tokenHash },
 		});
 
-		console.log(
-			"=====Comparing if the token sent by client is sames as token stored in password reset table",
-		);
-
-		const resetEntry = await (async () => {
-			for (const entry of resets) {
-				const match = await bcrypt.compare(dto.token, entry.tokenHash);
-				if (match) return entry;
-			}
-			return null;
-		})();
-
 		if (!resetEntry) {
+			this.logger.warn("Invalid or expired reset token");
 			throw new BadRequestException("Invalid or expired reset token");
 		}
 
-		console.log(
-			"=====Reset token is not expired and matches the token stored in password reset table",
-		);
-
-		console.log("=====Hashing new password provided by user");
-
 		const newPasswordHash = await bcrypt.hash(dto.newPassword, 10);
-
-		console.log("=====New password hashed");
-
-		console.log("=====Updating user table with new hash password entry");
 
 		await this.prisma.user.update({
 			where: { id: resetEntry.userId },
 			data: { passwordHash: newPasswordHash },
 		});
 
-		console.log("=====User table updated");
-
-		console.log("=====Deleting user data from password reset table");
-
 		await this.prisma.passwordReset.delete({
 			where: { id: resetEntry.id },
 		});
 
-		console.log("=====User data deleted from password reset table");
+		this.logger.info(
+			{ userId: resetEntry.userId },
+			"Password reset successful",
+		);
 
 		return { success: true };
 	}
 
+	// =========================
+	// LOGOUT
+	// =========================
+
 	async logout(userId: string, res: Response) {
-		console.log("=====Just got inside logout model in logout service");
-
-		console.log(
-			"=====Updating the refresh token hash to null in user table",
-		);
-
 		await this.prisma.user.update({
 			where: { id: userId },
 			data: { refreshTokenHash: null },
 		});
 
-		console.log("=====Updated user table");
-
-		console.log(
-			"=====Clearing access and refresh token cookies from client side",
-		);
-
-		// Clear cookies
 		res.clearCookie("access_token");
 		res.clearCookie("refresh_token");
 
-		console.log("=====Cleared both access and refresh token cookies");
+		this.logger.info({ userId }, "User logged out");
 
 		return { success: true };
 	}
 
-	async me(userId: string) {
-		console.log("=====Just got inside me model of me service");
+	// =========================
+	// ME
+	// =========================
 
-		console.log("=====Finding out user with userId");
-
+	async me(payload: { sub: string; tenantId?: string; role?: string }) {
 		const user = await this.prisma.user.findUnique({
-			where: { id: userId },
+			where: { id: payload.sub },
 			include: {
 				memberships: {
-					include: {
-						tenant: true,
-					},
+					include: { tenant: true },
 				},
 			},
 		});
@@ -652,15 +451,13 @@ export class AuthService implements OnModuleInit {
 			throw new UnauthorizedException("You are not authorized");
 		}
 
-		console.log(
-			"=====Got the unique user with tenants and sending the data to frontend",
-		);
-
 		return {
 			user: {
 				id: user.id,
 				email: user.email,
 				name: user.name,
+				selectedTenantId: payload.tenantId || null,
+				role: payload.role || null,
 				tenants: user.memberships.map((m) => ({
 					id: m.tenantId,
 					name: m.tenant.name,

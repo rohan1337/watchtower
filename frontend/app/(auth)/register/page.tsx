@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import AuthLayout from "@/components/layouts/auth/AuthLayout";
-import AuthInput from "@/components/layouts/auth/AuthInput";
-import AuthPasswordInput from "@/components/layouts/auth/AuthPasswordInput";
-import AuthError from "@/components/layouts/auth/AuthError";
-import AuthButton from "@/components/layouts/auth/AuthButton";
-import AuthFooterLink from "@/components/layouts/auth/AuthFooterLink";
+import AuthLayout from "@/components/auth/AuthLayout";
+import AuthInput from "@/components/auth/AuthInput";
+import AuthPasswordInput from "@/components/auth/AuthPasswordInput";
+import AuthError from "@/components/auth/AuthError";
+import AuthButton from "@/components/auth/AuthButton";
+import AuthFooterLink from "@/components/auth/AuthFooterLink";
 
 const BASE_URL_AUTH_SER = process.env.NEXT_PUBLIC_API_BASE_URL_AUTH_SER;
 
@@ -55,11 +55,6 @@ const RegisterPage = () => {
 				credentials: "include",
 				body: JSON.stringify(formData),
 			});
-
-			// if (!res.ok) {
-			// 	const data = await res.json();
-			// 	throw new Error(JSON.stringify(data));
-			// }
 
 			if (!res.ok) {
 				const data = await res.json();

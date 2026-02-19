@@ -15,19 +15,23 @@ import { LoginDto } from "./dtos/login.dto";
 import { ForgotPasswordDto } from "./dtos/forgot-password.dto";
 import { ResetPasswordDto } from "./dtos/reset-password.dto";
 import type { Response } from "express";
-import { SelectTenantDto } from "./dtos/select-tenant.dto";
+import { SelectWorkspaceDto } from "./dtos/select-workspace.dto";
 import { JwtAuthGuard } from "./guards/jwt-auth.guard";
+import { PinoLogger } from "nestjs-pino";
 
 @Controller("auth-ser/api/auth")
 export class AuthController {
-	constructor(private readonly authService: AuthService) {}
+	constructor(
+		private readonly authService: AuthService,
+		private readonly logger: PinoLogger,
+	) {
+		this.logger.setContext(AuthController.name);
+	}
 
 	@Post("register")
 	async register(@Body() dto: RegisterDto) {
-		console.log(
-			"=====Just got inside register method of register controller with email:",
-			dto.email,
-		);
+		this.logger.info({ email: dto.email }, "Register request received");
+
 		return this.authService.register(dto);
 	}
 
@@ -36,71 +40,83 @@ export class AuthController {
 		@Body() dto: VerifyEmailDto,
 		@Res({ passthrough: true }) res: Response,
 	) {
-		console.log(
-			"=====Just got inside verify email method of verify email controller",
-		);
+		this.logger.info("Verify email request received");
+
 		return this.authService.verifyEmail(dto, res);
 	}
 
 	@Post("login")
 	login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
-		console.log(
-			"=====Just got inside login method of login controller with email:",
-			dto.email,
-		);
+		this.logger.info({ email: dto.email }, "Login request received");
+
 		return this.authService.login(dto, res);
 	}
 
 	@UseGuards(JwtAuthGuard)
-	@Post("select-tenant")
-	selectTenant(
-		@Body() dto: SelectTenantDto,
+	@Post("select-workspace")
+	selectWorkspace(
+		@Body() dto: SelectWorkspaceDto,
 		@Req() req,
 		@Res({ passthrough: true }) res: Response,
 	) {
-		return this.authService.selectTenant(req.user.sub, dto.tenantId, res);
+		this.logger.info(
+			{
+				userId: req.user.sub,
+				tenantId: dto.tenantId,
+			},
+			"Select tenant request",
+		);
+
+		return this.authService.selectWorkspace(
+			req.user.sub,
+			dto.tenantId,
+			res,
+		);
 	}
 
 	@Post("refresh")
 	refresh(@Req() req, @Res({ passthrough: true }) res: Response) {
-		console.log(
-			"=====Just got inside refresh method of refresh controller with refresh token:",
-			req.cookies?.refresh_token,
-		);
 		const token = req.cookies?.refresh_token;
+
 		if (!token) {
+			this.logger.warn("Refresh attempted without token");
 			throw new UnauthorizedException("No refresh token");
 		}
+
+		this.logger.info("Refresh token request received");
+
 		return this.authService.refresh(token, res);
 	}
 
 	@Post("forgot-password")
 	forgotPassword(@Body() dto: ForgotPasswordDto) {
-		console.log(
-			"=====Just got inside forgotPassword method of forgot-password controller",
-		);
+		this.logger.info({ email: dto.email }, "Forgot password request");
+
 		return this.authService.forgotPassword(dto);
 	}
 
 	@Post("reset-password")
 	resetPassword(@Body() dto: ResetPasswordDto) {
-		console.log(
-			"=====Just got inside resetPassword method of reset-password controller",
-		);
+		this.logger.info("Reset password request");
+
 		return this.authService.resetPassword(dto);
 	}
 
 	@UseGuards(JwtAuthGuard)
 	@Post("logout")
 	logout(@Req() req, @Res({ passthrough: true }) res: Response) {
-		console.log("=====Just got inside logout method of logout controller");
 		const userId = req.user.sub;
+
+		this.logger.info({ userId }, "Logout request");
+
 		return this.authService.logout(userId, res);
 	}
 
 	@UseGuards(JwtAuthGuard)
 	@Get("me")
 	me(@Req() req) {
-		return this.authService.me(req.user.sub);
+		this.logger.info({ userId: req.user.sub }, "Me endpoint accessed");
+
+		return this.authService.me(req.user);
 	}
 }

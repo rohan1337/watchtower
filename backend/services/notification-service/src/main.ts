@@ -1,18 +1,22 @@
 import { NestFactory } from "@nestjs/core";
 import { Transport } from "@nestjs/microservices";
-import { NotificationModule } from "./modules/notification/notification.module";
+import { AppModule } from "./app.module";
+import { Logger } from "@nestjs/common";
 
 async function bootstrap() {
-	const app = await NestFactory.createMicroservice(NotificationModule, {
+	const logger = new Logger("Bootstrap");
+
+	const app = await NestFactory.createMicroservice(AppModule, {
 		transport: Transport.REDIS,
 		options: {
 			host: "localhost",
 			port: 6379,
 		},
+		bufferLogs: true,
 	});
-	
+
 	await app.listen();
-	console.log("Notification Service is running");
+	logger.log(`Notification Service is running`);
 }
 
 bootstrap();

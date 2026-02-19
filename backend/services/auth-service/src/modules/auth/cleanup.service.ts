@@ -1,26 +1,34 @@
 import { Injectable } from "@nestjs/common";
 import { Cron } from "@nestjs/schedule";
 import { PrismaService } from "../../database/prisma.service";
+import { PinoLogger } from "nestjs-pino";
 
 @Injectable()
 export class CleanupService {
-	constructor(private readonly prisma: PrismaService) {}
+	constructor(
+		private readonly prisma: PrismaService,
+		private readonly logger: PinoLogger,
+	) {
+		this.logger.setContext(CleanupService.name);
+	}
 
-	// Runs every 2 hours — adjust as per your needs
 	@Cron("0 */2 * * *")
 	async cleanupExpired() {
-		console.log(
-			"=====Running cleanup cronjob for cleaning temporary user data during registration",
-		);
+		this.logger.info("Starting email verification cleanup job");
 
-		const deleted = await this.prisma.emailVerification.deleteMany({
-			where: {
-				expiresAt: { lt: new Date() },
-			},
-		});
+		try {
+			const deleted = await this.prisma.emailVerification.deleteMany({
+				where: {
+					expiresAt: { lt: new Date() },
+				},
+			});
 
-		console.log(
-			`=====Cleanup complete: ${deleted.count} expired rows deleted`,
-		);
+			this.logger.info(
+				{ deletedCount: deleted.count },
+				"Cleanup job completed",
+			);
+		} catch (error) {
+			this.logger.error({ err: error }, "Cleanup job failed");
+		}
 	}
 }

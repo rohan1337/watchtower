@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import AuthLayout from "@/components/layouts/auth/AuthLayout";
-import AuthInput from "@/components/layouts/auth/AuthInput";
-import AuthSelect from "@/components/layouts/auth/AuthSelect";
-import AuthError from "@/components/layouts/auth/AuthError";
-import AuthButton from "@/components/layouts/auth/AuthButton";
+import AuthLayout from "@/components/auth/AuthLayout";
+import AuthInput from "@/components/auth/AuthInput";
+import AuthSelect from "@/components/auth/AuthSelect";
+import AuthError from "@/components/auth/AuthError";
+import AuthButton from "@/components/auth/AuthButton";
 
 const BASE_URL_AUTH_SER = process.env.NEXT_PUBLIC_API_BASE_URL_AUTH_SER;
 
@@ -52,9 +52,9 @@ const CreateWorkspacePage = () => {
 			// Assuming backend returns created tenant
 			const tenantId = data.tenant.id;
 
-			// Call select-tenant to issue scoped JWT
+			// Call select-workspace to issue scoped JWT
 			const selectRes = await fetch(
-				`${BASE_URL_AUTH_SER}/auth/select-tenant`,
+				`${BASE_URL_AUTH_SER}/auth/select-workspace`,
 				{
 					method: "POST",
 					headers: { "Content-Type": "application/json" },

@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import AuthLayout from "@/components/layouts/auth/AuthLayout";
-import AuthInput from "@/components/layouts/auth/AuthInput";
-import AuthPasswordInput from "@/components/layouts/auth/AuthPasswordInput";
-import AuthError from "@/components/layouts/auth/AuthError";
-import AuthButton from "@/components/layouts/auth/AuthButton";
-import AuthFooterLink from "@/components/layouts/auth/AuthFooterLink";
+import AuthLayout from "@/components/auth/AuthLayout";
+import AuthInput from "@/components/auth/AuthInput";
+import AuthPasswordInput from "@/components/auth/AuthPasswordInput";
+import AuthError from "@/components/auth/AuthError";
+import AuthButton from "@/components/auth/AuthButton";
+import AuthFooterLink from "@/components/auth/AuthFooterLink";
+import { useAuth } from "../../contexts/AuthContext";
 
 const BASE_URL_AUTH_SER = process.env.NEXT_PUBLIC_API_BASE_URL_AUTH_SER;
 
@@ -21,6 +22,7 @@ const LoginPage = () => {
 	const [errors, setErrors] = useState<string[]>([]);
 
 	const router = useRouter();
+	const { setUser } = useAuth();
 
 	const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		// Clear previous errors when user modifies any field
@@ -52,16 +54,19 @@ const LoginPage = () => {
 				body: JSON.stringify(formData),
 			});
 
-			// if (!res.ok) {
-			// 	const data = await res.json();
-			// 	throw new Error(JSON.stringify(data));
-			// }
+			const data = await res.json();
 
 			if (!res.ok) {
-				const data = await res.json();
 				setErrors([data.message || "Invalid credentials"]);
 				return;
 			}
+
+			// Set user immediately
+			setUser({
+				id: data.user.id,
+				tenants: data.tenants,
+				selectedTenantId: null,
+			});
 
 			setFormData({ email: "", password: "" });
 			setShowPassword(false);

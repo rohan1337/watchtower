@@ -2,51 +2,35 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-
-const BASE_URL_AUTH_SER = process.env.NEXT_PUBLIC_API_BASE_URL_AUTH_SER;
+import { useAuth } from "../contexts/AuthContext";
 
 export default function OnboardingPage() {
+	const { user, loading } = useAuth();
 	const router = useRouter();
 
 	useEffect(() => {
-		const checkUser = async () => {
-			try {
-				const res = await fetch(`${BASE_URL_AUTH_SER}/auth/me`, {
-					credentials: "include",
-				});
+		if (loading) return;
 
-				if (!res.ok) {
-					throw new Error("Unauthorized");
-				}
+		if (!user) {
+			router.replace("/login");
+			return;
+		}
 
-				const data = await res.json();
-				const tenants = data.user.tenants;
+		if (!user.tenants || user.tenants.length === 0) {
+			router.replace("/create-workspace");
+			return;
+		}
 
-				// No tenants → create workspace
-				if (!tenants || tenants.length === 0) {
-					router.replace("/create-workspace");
-					return;
-				}
+		if (user.tenants.length === 1) {
+			router.replace(`/${user.tenants[0].id}/dashboard`);
+			return;
+		}
 
-				// One tenant → auto select
-				if (tenants.length === 1) {
-					const tenantId = tenants[0].id;
-					router.replace(`/${tenantId}/dashboard`);
-					return;
-				}
-
-				// Multiple tenants → selection page
-				router.replace("/select-workspace");
-			} catch {
-				router.replace("/login");
-			}
-		};
-
-		checkUser();
-	}, [router]);
+		router.replace("/select-workspace");
+	}, [user, loading]);
 
 	return (
-		<div className="h-screen flex items-center justify-center">
+		<div className="h-screen bg-neutral-100 flex items-center justify-center">
 			<p className="text-neutral-700">Preparing your workspace...</p>
 		</div>
 	);

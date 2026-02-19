@@ -49,7 +49,7 @@ export default function WorkspaceSwitcher({ currentTenantId }: Props) {
 	}, []);
 
 	const handleSelect = async (tenantId: string) => {
-		await fetch(`${BASE_URL_AUTH_SER}/auth/select-tenant`, {
+		await fetch(`${BASE_URL_AUTH_SER}/auth/select-workspace`, {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			credentials: "include",
@@ -66,19 +66,24 @@ export default function WorkspaceSwitcher({ currentTenantId }: Props) {
 		<div className="relative" ref={ref}>
 			<button
 				onClick={() => setOpen((v) => !v)}
-				className="flex items-center gap-2 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
+				className="flex items-center gap-2 rounded-md border border-neutral-700 cursor-pointer bg-neutral-50 px-3 py-1.5 text-sm font-medium text-neutral-700 transition-all duration-200 ease-in-out hover:bg-neutral-100"
 			>
 				<span>{currentTenant?.name || "Workspace"}</span>
-				<ChevronDown size={16} />
+				<ChevronDown
+					size={16}
+					className={`transition-transform duration-200 ease-in-out ${
+						open ? "rotate-180" : "rotate-0"
+					}`}
+				/>
 			</button>
 
 			{open && (
-				<div className="absolute right-0 mt-2 w-48 rounded-md border border-neutral-200 bg-white shadow-lg">
+				<div className="absolute right-0 mt-2 w-48 p-2 rounded-md border border-neutral-700 bg-white shadow-lg">
 					{tenants.map((tenant) => (
 						<button
 							key={tenant.id}
 							onClick={() => handleSelect(tenant.id)}
-							className={`block w-full px-4 py-2 text-left text-sm hover:bg-neutral-100 ${
+							className={`block w-full px-4 py-2 rounded-sm text-left text-sm text-neutral-700 cursor-pointer hover:bg-neutral-100 ${
 								tenant.id === currentTenantId
 									? "bg-neutral-100 font-medium"
 									: ""

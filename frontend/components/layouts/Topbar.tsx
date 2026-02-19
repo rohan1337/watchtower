@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import WorkspaceSwitcher from "@/components/dashboard/WorkspaceSwitcher";
+import WorkspaceSwitcher from "@/components/topbar-button/WorkspaceSwitcher";
 
 const BASE_URL_AUTH_SER = process.env.NEXT_PUBLIC_API_BASE_URL_AUTH_SER;
 
@@ -23,7 +23,7 @@ export default function Topbar({ tenantId }: Props) {
 	};
 
 	return (
-		<header className="flex h-16 items-center justify-between border-b border-neutral-200 bg-white px-6">
+		<header className="flex h-16 items-center justify-between border-b border-neutral-700 bg-white px-6 py-4 shadow-sm">
 			{/* Left: Workspace Switcher */}
 			<WorkspaceSwitcher currentTenantId={tenantId} />
 

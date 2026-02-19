@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import AuthButton from "@/components/layouts/auth/AuthButton";
-import AuthError from "@/components/layouts/auth/AuthError";
-import AuthFooterLink from "@/components/layouts/auth/AuthFooterLink";
-import AuthInput from "@/components/layouts/auth/AuthInput";
-import AuthLayout from "@/components/layouts/auth/AuthLayout";
+import AuthButton from "@/components/auth/AuthButton";
+import AuthError from "@/components/auth/AuthError";
+import AuthFooterLink from "@/components/auth/AuthFooterLink";
+import AuthInput from "@/components/auth/AuthInput";
+import AuthLayout from "@/components/auth/AuthLayout";
 
 const BASE_URL_AUTH_SER = process.env.NEXT_PUBLIC_API_BASE_URL_AUTH_SER;
 

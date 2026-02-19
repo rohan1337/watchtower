@@ -2,21 +2,35 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Sidebar from "../../../components/layouts/Sidebar";
 import Topbar from "../../../components/layouts/Topbar";
+import TenantProvider from "@/app/contexts/tenant-context/TenantProvider";
 
 const BASE_URL_AUTH_SER = process.env.NEXT_PUBLIC_API_BASE_URL_AUTH_SER;
+
+type Tenant = {
+	id: string;
+	name: string;
+	role: string;
+};
 
 export default async function TenantLayout({
 	children,
 	params,
 }: {
 	children: React.ReactNode;
-	params: { tenantId: string };
+	params: Promise<{ tenantId: string }>;
 }) {
-	const cookieStore = cookies();
+	const { tenantId } = await params;
+
+	const cookieStore = await cookies();
+
+	const cookieHeader = cookieStore
+		.getAll()
+		.map((cookie) => `${cookie.name}=${cookie.value}`)
+		.join("; ");
 
 	const res = await fetch(`${BASE_URL_AUTH_SER}/auth/me`, {
 		headers: {
-			Cookie: cookieStore.toString(),
+			Cookie: cookieHeader,
 		},
 		cache: "no-store",
 	});
@@ -26,20 +40,37 @@ export default async function TenantLayout({
 	}
 
 	const data = await res.json();
+	const selectedTenantId = data.user.selectedTenantId;
 
-	const tenant = data.user.tenants.find((t: any) => t.id === params.tenantId);
+	// No active tenant
+	if (!selectedTenantId) {
+		redirect("/create-workspace");
+	}
+
+	// URL mismatch protection
+	if (selectedTenantId !== tenantId) {
+		redirect(`/${selectedTenantId}/dashboard`);
+	}
+
+	const tenant = data.user.tenants.find(
+		(t: Tenant) => t.id === selectedTenantId,
+	);
 
 	if (!tenant) {
-		redirect("/select-tenant");
+		redirect("/create-workspace");
 	}
 
 	return (
-		<div className="flex h-screen">
-			<Sidebar tenantId={params.tenantId} />
-			<div className="flex-1 flex flex-col">
-				<Topbar tenantId={params.tenantId} tenantName={tenant.name} />
-				<main className="p-6 bg-neutral-50 flex-1">{children}</main>
+		<TenantProvider tenant={tenant}>
+			<div className="flex h-screen">
+				<Sidebar tenantId={tenantId} />
+				<div className="flex-1 flex flex-col">
+					<Topbar tenantId={tenantId} tenantName={tenant.name} />
+					<main className="p-6 bg-neutral-50 flex-1 overflow-y-auto">
+						{children}
+					</main>
+				</div>
 			</div>
-		</div>
+		</TenantProvider>
 	);
 }
