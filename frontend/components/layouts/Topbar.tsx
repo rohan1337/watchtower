@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import WorkspaceSwitcher from "@/components/topbar-button/WorkspaceSwitcher";
+import { toast } from "sonner";
 
 const BASE_URL_AUTH_SER = process.env.NEXT_PUBLIC_API_BASE_URL_AUTH_SER;
 
@@ -14,12 +15,24 @@ export default function Topbar({ tenantId }: Props) {
 	const router = useRouter();
 
 	const handleLogout = async () => {
-		await fetch(`${BASE_URL_AUTH_SER}/auth/logout`, {
-			method: "POST",
-			credentials: "include",
-		});
+		try {
+			const res = await fetch(`${BASE_URL_AUTH_SER}/auth/logout`, {
+				method: "POST",
+				credentials: "include",
+			});
 
-		router.replace("/login");
+			if (!res.ok) {
+				toast.error("Failed to logout");
+				throw new Error("Failed to logout");
+			}
+
+			toast.success("Logged out successfully!");
+			router.replace("/login");
+			router.refresh(); // optional, clears server state
+		} catch (err) {
+			console.error("Error while logging out:", err);
+			toast.error("Error while logging out");
+		}
 	};
 
 	return (
@@ -31,7 +44,7 @@ export default function Topbar({ tenantId }: Props) {
 			<div>
 				<button
 					onClick={handleLogout}
-					className="text-sm text-red-600 hover:underline"
+					className="text-sm text-red-600 cursor-pointer hover:underline"
 				>
 					Logout
 				</button>

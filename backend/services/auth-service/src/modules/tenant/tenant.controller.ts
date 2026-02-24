@@ -1,4 +1,12 @@
-import { Body, Controller, Post, Req, UseGuards } from "@nestjs/common";
+import {
+	Body,
+	Controller,
+	Get,
+	Param,
+	Post,
+	Req,
+	UseGuards,
+} from "@nestjs/common";
 import { TenantService } from "./tenant.service";
 import { CreateTenantDto } from "./dtos/create-tenant.dto";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
@@ -25,5 +33,10 @@ export class TenantController {
 		);
 
 		return this.tenantService.create(req.user.sub, dto);
+	}
+
+	@Get("slug/:slug")
+	findBySlug(@Param("slug") slug: string) {
+		return this.tenantService.findBySlug(slug);
 	}
 }

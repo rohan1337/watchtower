@@ -17,17 +17,23 @@ const COLORS = {
 		bg: "bg-green-50",
 		text: "text-green-600",
 	},
+	gray: {
+		bg: "bg-gray-100",
+		text: "text-gray-600",
+	},
+};
+
+type SeverityCardProps = {
+	label: string;
+	count: number;
+	color: keyof typeof COLORS;
 };
 
 export default function SeverityCard({
 	label,
 	count,
 	color,
-}: {
-	label: string;
-	count: string;
-	color: keyof typeof COLORS;
-}) {
+}: SeverityCardProps) {
 	const styles = COLORS[color];
 
 	return (
@@ -35,7 +41,9 @@ export default function SeverityCard({
 			className={`p-4 rounded-lg flex flex-col gap-1 justify-center items-center ${styles.bg}`}
 		>
 			<p className="text-md text-neutral-900">{label}</p>
-			<p className={`text-xl font-semibold ${styles.text}`}>{count}</p>
+			<p className={`text-xl font-semibold ${styles.text}`}>
+				{count.toLocaleString()}
+			</p>
 		</div>
 	);
 }

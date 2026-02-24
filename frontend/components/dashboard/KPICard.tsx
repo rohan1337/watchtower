@@ -6,7 +6,7 @@ export default function KPICard({
 	color,
 }: {
 	title: string;
-	value: string;
+	value: number;
 	color: string;
 }) {
 	return (

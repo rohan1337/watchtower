@@ -119,4 +119,15 @@ export class AuthController {
 
 		return this.authService.me(req.user);
 	}
+
+	@UseGuards(JwtAuthGuard)
+	@Post("bulk")
+	getUsersByIds(@Body() body: { ids: string[] }) {
+		this.logger.info(
+			{ count: body.ids.length },
+			"Bulk user lookup request received",
+		);
+
+		return this.authService.findByIds(body.ids);
+	}
 }

@@ -7,6 +7,13 @@ import { useAuth } from "../contexts/AuthContext";
 
 const BASE_URL_AUTH_SER = process.env.NEXT_PUBLIC_API_BASE_URL_AUTH_SER;
 
+type Tenant = {
+	id: string;
+	name: string;
+	slug: string;
+	role: string;
+};
+
 export default function SelectWorkspacePage() {
 	const { user, loading } = useAuth();
 	const [selecting, setSelecting] = useState<string | null>(null);
@@ -25,11 +32,11 @@ export default function SelectWorkspacePage() {
 		}
 
 		if (user.tenants.length === 1) {
-			autoSelectWorkspace(user.tenants[0].id);
+			autoSelectWorkspace(user.tenants[0]);
 		}
 	}, [user, loading]);
 
-	const autoSelectWorkspace = async (tenantId: string) => {
+	const autoSelectWorkspace = async (tenant: Tenant) => {
 		try {
 			const res = await fetch(
 				`${BASE_URL_AUTH_SER}/auth/select-workspace`,
@@ -37,7 +44,7 @@ export default function SelectWorkspacePage() {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
 					credentials: "include",
-					body: JSON.stringify({ tenantId }),
+					body: JSON.stringify({ tenantId: tenant.id }),
 				},
 			);
 
@@ -46,15 +53,15 @@ export default function SelectWorkspacePage() {
 			// IMPORTANT: small micro-delay to ensure cookie is stored
 			await new Promise((resolve) => setTimeout(resolve, 50));
 
-			router.replace(`/${tenantId}/dashboard`);
+			router.replace(`/${tenant.slug}/dashboard`);
 		} catch {
 			router.replace("/login");
 		}
 	};
 
-	const handleSelect = async (tenantId: string) => {
+	const handleSelect = async (tenant: Tenant) => {
 		try {
-			setSelecting(tenantId);
+			setSelecting(tenant.id);
 
 			const res = await fetch(
 				`${BASE_URL_AUTH_SER}/auth/select-workspace`,
@@ -62,7 +69,7 @@ export default function SelectWorkspacePage() {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
 					credentials: "include",
-					body: JSON.stringify({ tenantId }),
+					body: JSON.stringify({ tenantId: tenant.id }),
 				},
 			);
 
@@ -70,7 +77,7 @@ export default function SelectWorkspacePage() {
 				throw new Error("Failed to select tenant");
 			}
 
-			router.replace(`/${tenantId}/dashboard`);
+			router.replace(`/${tenant.slug}/dashboard`);
 		} catch (err: any) {
 			toast.error(err.message || "Something went wrong");
 		} finally {
@@ -97,7 +104,7 @@ export default function SelectWorkspacePage() {
 					{user?.tenants.map((tenant) => (
 						<button
 							key={tenant.id}
-							onClick={() => handleSelect(tenant.id)}
+							onClick={() => handleSelect(tenant)}
 							disabled={selecting === tenant.id}
 							className="w-full border border-neutral-700 rounded-md px-3 py-3 text-left cursor-pointer hover:bg-neutral-50 hover:border-neutral-900"
 						>

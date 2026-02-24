@@ -10,6 +10,7 @@ type Tenant = {
 	id: string;
 	name: string;
 	role: string;
+	slug: string;
 };
 
 type Props = {
@@ -48,16 +49,16 @@ export default function WorkspaceSwitcher({ currentTenantId }: Props) {
 			document.removeEventListener("mousedown", handleClickOutside);
 	}, []);
 
-	const handleSelect = async (tenantId: string) => {
+	const handleSelect = async (tenant: Tenant) => {
 		await fetch(`${BASE_URL_AUTH_SER}/auth/select-workspace`, {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			credentials: "include",
-			body: JSON.stringify({ tenantId }),
+			body: JSON.stringify({ tenantId: tenant.id }),
 		});
 
 		setOpen(false);
-		router.replace(`/${tenantId}/dashboard`);
+		router.replace(`/${tenant.slug}/dashboard`);
 	};
 
 	const currentTenant = tenants.find((t) => t.id === currentTenantId);
@@ -82,7 +83,7 @@ export default function WorkspaceSwitcher({ currentTenantId }: Props) {
 					{tenants.map((tenant) => (
 						<button
 							key={tenant.id}
-							onClick={() => handleSelect(tenant.id)}
+							onClick={() => handleSelect(tenant)}
 							className={`block w-full px-4 py-2 rounded-sm text-left text-sm text-neutral-700 cursor-pointer hover:bg-neutral-100 ${
 								tenant.id === currentTenantId
 									? "bg-neutral-100 font-medium"

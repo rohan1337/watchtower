@@ -50,7 +50,7 @@ const CreateWorkspacePage = () => {
 			}
 
 			// Assuming backend returns created tenant
-			const tenantId = data.tenant.id;
+			const { id: tenantId, slug } = data.tenant;
 
 			// Call select-workspace to issue scoped JWT
 			const selectRes = await fetch(
@@ -70,7 +70,7 @@ const CreateWorkspacePage = () => {
 			toast.success("Workspace created successfully!");
 
 			// Redirect with context
-			router.replace(`/${tenantId}/dashboard`);
+			router.replace(`/${slug}/dashboard`);
 		} catch (err: any) {
 			try {
 				const parsed = JSON.parse(err.message);

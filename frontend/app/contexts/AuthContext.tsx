@@ -1,12 +1,20 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
-
-const BASE_URL_AUTH_SER = process.env.NEXT_PUBLIC_API_BASE_URL_AUTH_SER;
+import { authApi } from "@/lib/api/authApi";
+import {
+	createContext,
+	useCallback,
+	useContext,
+	useEffect,
+	useState,
+} from "react";
+import { useRouter } from "next/navigation";
+import { setLogoutHandler } from "@/lib/logout";
 
 type Tenant = {
 	id: string;
 	name: string;
+	slug: string;
 	role: string;
 };
 
@@ -21,27 +29,20 @@ type AuthContextType = {
 	loading: boolean;
 	refreshUser: () => Promise<void>;
 	setUser: (user: User | null) => void;
+	signOut: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+	const router = useRouter();
 	const [user, setUser] = useState<User | null>(null);
 	const [loading, setLoading] = useState(true);
 
 	const fetchUser = async () => {
 		try {
-			const res = await fetch(`${BASE_URL_AUTH_SER}/auth/me`, {
-				credentials: "include",
-			});
-
-			if (!res.ok) {
-				setUser(null);
-				return;
-			}
-
-			const data = await res.json();
-			setUser(data.user);
+			const res = await authApi.get("/auth/me");
+			setUser(res.data.user);
 		} catch {
 			setUser(null);
 		} finally {
@@ -49,13 +50,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 		}
 	};
 
+	const signOut = useCallback(async () => {
+		try {
+			await authApi.post("/auth/logout");
+		} catch {}
+
+		setUser(null);
+		router.replace("/login");
+	}, [router]);
+
 	useEffect(() => {
 		fetchUser();
 	}, []);
 
+	useEffect(() => {
+		setLogoutHandler(signOut);
+	}, [signOut]);
+
 	return (
 		<AuthContext.Provider
-			value={{ user, loading, refreshUser: fetchUser, setUser }}
+			value={{ user, loading, refreshUser: fetchUser, setUser, signOut }}
 		>
 			{children}
 		</AuthContext.Provider>

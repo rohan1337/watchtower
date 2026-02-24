@@ -22,7 +22,7 @@ export default function OnboardingPage() {
 		}
 
 		if (user.tenants.length === 1) {
-			router.replace(`/${user.tenants[0].id}/dashboard`);
+			router.replace(`/${user.tenants[0].slug}/dashboard`);
 			return;
 		}
 

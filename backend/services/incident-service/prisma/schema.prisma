@@ -27,6 +27,12 @@ enum Severity {
     CRITICAL
 }
 
+enum AlertStatus {
+    OPEN
+    ACKNOWLEDGED
+    RESOLVED
+}
+
 model Incident {
     id          String         @id @default(uuid())
     title       String
@@ -49,6 +55,8 @@ model Alert {
     id      String  @id @default(uuid())
     message String
     source  String?
+
+    status AlertStatus @default(OPEN)
 
     incidentId String
     incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)

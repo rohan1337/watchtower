@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
 	AlertTriangle,
-	Bell,
 	LayoutDashboard,
 	Plug,
 	Settings,
@@ -12,44 +12,50 @@ import {
 } from "lucide-react";
 
 type Props = {
-	tenantId: string;
+	slug: string;
 };
 
-export default function Sidebar({ tenantId }: Props) {
+export default function Sidebar({ slug }: Props) {
 	const pathname = usePathname();
 
 	const navItems = [
 		{
 			label: "Dashboard",
-			href: `/${tenantId}/dashboard`,
+			href: `/${slug}/dashboard`,
 			icon: <LayoutDashboard size={18} />,
 		},
 		{
 			label: "Incidents",
-			href: `/${tenantId}/incidents`,
+			href: `/${slug}/incidents`,
 			icon: <ShieldAlert size={18} />,
 		},
 		{
 			label: "Alerts",
-			href: `/${tenantId}/alerts`,
+			href: `/${slug}/alerts`,
 			icon: <AlertTriangle size={18} />,
 		},
 		{
 			label: "Integrations",
-			href: `/${tenantId}/integrations`,
+			href: `/${slug}/integrations`,
 			icon: <Plug size={18} />,
 		},
 		{
 			label: "Settings",
-			href: `/${tenantId}/settings`,
+			href: `/${slug}/settings`,
 			icon: <Settings size={18} />,
 		},
 	];
 
 	return (
 		<aside className="flex h-screen w-64 flex-col border-r border-neutral-700 bg-white shadow-sm">
-			<div className="flex h-16 items-center px-6">
-				<Bell className="mr-2 text-red-600" />
+			<div className="flex h-16 items-center gap-1.5 px-4">
+				<Image
+					src="/Gemini_Generated_Image_cszqn0cszqn0cszq.png"
+					alt="Watchtower Logo"
+					width={28}
+					height={28}
+					priority
+				/>
 				<span className="text-lg font-semibold text-neutral-900">
 					Watchtower
 				</span>

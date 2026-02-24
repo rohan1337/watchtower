@@ -17,17 +17,8 @@ import { ClientProxy } from "@nestjs/microservices";
 import { JwtService } from "@nestjs/jwt";
 import { Response } from "express";
 import { PinoLogger } from "nestjs-pino";
-import { Prisma } from "@prisma/client";
 import { randomBytes, createHash } from "crypto";
 import { Membership } from "@prisma/client";
-
-type ResetWithUser = Prisma.PasswordResetGetPayload<{
-	include: { user: true };
-}>;
-
-let resetEntry: ResetWithUser | null = null;
-
-const rawToken = randomBytes(32).toString("hex");
 
 @Injectable()
 export class AuthService implements OnModuleInit {
@@ -67,17 +58,9 @@ export class AuthService implements OnModuleInit {
 		);
 	}
 
-	private generateRefreshToken(
-		userId: string,
-		tenantId?: string,
-		role?: string,
-	) {
+	private generateRefreshToken(userId: string) {
 		return this.jwtService.sign(
-			{
-				sub: userId,
-				tenantId,
-				role,
-			},
+			{ sub: userId },
 			{
 				secret: process.env.JWT_REFRESH_SECRET,
 				expiresIn: "7d",
@@ -88,34 +71,47 @@ export class AuthService implements OnModuleInit {
 	private async issueAuthCookies(
 		res: Response,
 		userId: string,
-		tenantId?: string,
-		role?: string,
+		options?: {
+			tenantId?: string;
+			role?: string;
+			rotateRefreshToken?: boolean;
+		},
 	) {
-		this.logger.debug({ userId, tenantId }, "Issuing auth cookies");
+		const tenantId = options?.tenantId;
+		const role = options?.role;
+		const rotateRefreshToken = options?.rotateRefreshToken ?? false;
+
+		this.logger.debug(
+			{ userId, tenantId, rotateRefreshToken },
+			"Issuing auth cookies",
+		);
 
 		const accessToken = this.generateAccessToken(userId, tenantId, role);
-		const refreshToken = this.generateRefreshToken(userId, tenantId, role);
-
-		const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
-
-		await this.prisma.user.update({
-			where: { id: userId },
-			data: { refreshTokenHash },
-		});
 
 		res.cookie("access_token", accessToken, {
 			httpOnly: true,
 			sameSite: "lax",
-			secure: false,
+			secure: process.env.NODE_ENV === "production",
 			maxAge: 15 * 60 * 1000,
 		});
 
-		res.cookie("refresh_token", refreshToken, {
-			httpOnly: true,
-			sameSite: "lax",
-			secure: false,
-			maxAge: 7 * 24 * 60 * 60 * 1000,
-		});
+		if (rotateRefreshToken) {
+			const refreshToken = this.generateRefreshToken(userId);
+
+			const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
+
+			await this.prisma.user.update({
+				where: { id: userId },
+				data: { refreshTokenHash },
+			});
+
+			res.cookie("refresh_token", refreshToken, {
+				httpOnly: true,
+				sameSite: "lax",
+				secure: process.env.NODE_ENV === "production",
+				maxAge: 7 * 24 * 60 * 60 * 1000,
+			});
+		}
 	}
 
 	// =========================
@@ -237,8 +233,25 @@ export class AuthService implements OnModuleInit {
 			include: { tenant: true },
 		});
 
-		// 🔥 ISSUE TEMP TOKEN (NO TENANT)
-		await this.issueAuthCookies(res, user.id);
+		// 🔥 CASE 1: No tenants → global session
+		if (memberships.length === 0) {
+			await this.issueAuthCookies(res, user.id);
+		}
+
+		// 🔥 CASE 2: Exactly one tenant → auto-scope session
+		else if (memberships.length === 1) {
+			const membership = memberships[0];
+
+			await this.issueAuthCookies(res, user.id, {
+				tenantId: membership.tenantId,
+				role: membership.role,
+			});
+		}
+
+		// 🔥 CASE 3: Multiple tenants → global session (force selection)
+		else {
+			await this.issueAuthCookies(res, user.id);
+		}
 
 		return {
 			user: {
@@ -249,6 +262,7 @@ export class AuthService implements OnModuleInit {
 			tenants: memberships.map((m) => ({
 				id: m.tenantId,
 				name: m.tenant.name,
+				slug: m.tenant.slug,
 				role: m.role,
 			})),
 		};
@@ -268,7 +282,11 @@ export class AuthService implements OnModuleInit {
 			throw new BadRequestException("Invalid tenant selection");
 		}
 
-		await this.issueAuthCookies(res, userId, tenantId, membership.role);
+		await this.issueAuthCookies(res, userId, {
+			tenantId,
+			role: membership.role,
+			rotateRefreshToken: false,
+		});
 
 		this.logger.info({ userId, tenantId }, "Tenant selected");
 
@@ -330,12 +348,11 @@ export class AuthService implements OnModuleInit {
 			}
 		}
 
-		await this.issueAuthCookies(
-			res,
-			user.id,
-			payload.tenantId,
-			membership?.role,
-		);
+		await this.issueAuthCookies(res, user.id, {
+			tenantId: membership?.tenantId,
+			role: membership?.role,
+			rotateRefreshToken: true,
+		});
 
 		this.logger.info({ userId: user.id }, "Tokens refreshed");
 
@@ -461,9 +478,34 @@ export class AuthService implements OnModuleInit {
 				tenants: user.memberships.map((m) => ({
 					id: m.tenantId,
 					name: m.tenant.name,
+					slug: m.tenant.slug,
 					role: m.role,
 				})),
 			},
 		};
+	}
+
+	async findByIds(ids: string[]) {
+		this.logger.info(
+			{ idCount: ids.length, scope: "bulk-lookup" },
+			"Bulk user fetch initiated",
+		);
+
+		const users = await this.prisma.user.findMany({
+			where: {
+				id: { in: ids },
+			},
+			select: {
+				id: true,
+				name: true,
+			},
+		});
+
+		this.logger.info(
+			{ returnedCount: users.length },
+			"Bulk user fetch completed",
+		);
+
+		return users;
 	}
 }
