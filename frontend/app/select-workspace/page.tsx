@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext";
+import { setAccessToken } from "@/lib/tokenStore";
+import { initSocket } from "@/lib/socket";
 
 const BASE_URL_AUTH_SER = process.env.NEXT_PUBLIC_API_BASE_URL_AUTH_SER;
 
@@ -17,10 +19,13 @@ type Tenant = {
 export default function SelectWorkspacePage() {
 	const { user, loading } = useAuth();
 	const [selecting, setSelecting] = useState<string | null>(null);
+	const [initializing, setInitializing] = useState(true);
+
 	const router = useRouter();
 
 	useEffect(() => {
 		if (loading) return;
+
 		if (!user) {
 			router.replace("/login");
 			return;
@@ -31,9 +36,14 @@ export default function SelectWorkspacePage() {
 			return;
 		}
 
+		// Only one workspace → auto activate
 		if (user.tenants.length === 1) {
 			autoSelectWorkspace(user.tenants[0]);
+			return;
 		}
+
+		// Multiple workspaces → show selection
+		setInitializing(false);
 	}, [user, loading]);
 
 	const autoSelectWorkspace = async (tenant: Tenant) => {
@@ -50,8 +60,10 @@ export default function SelectWorkspacePage() {
 
 			if (!res.ok) throw new Error();
 
-			// IMPORTANT: small micro-delay to ensure cookie is stored
-			await new Promise((resolve) => setTimeout(resolve, 50));
+			const data = await res.json();
+
+			setAccessToken(data.accessToken);
+			initSocket();
 
 			router.replace(`/${tenant.slug}/dashboard`);
 		} catch {
@@ -62,6 +74,7 @@ export default function SelectWorkspacePage() {
 	const handleSelect = async (tenant: Tenant) => {
 		try {
 			setSelecting(tenant.id);
+			setInitializing(true);
 
 			const res = await fetch(
 				`${BASE_URL_AUTH_SER}/auth/select-workspace`,
@@ -77,6 +90,14 @@ export default function SelectWorkspacePage() {
 				throw new Error("Failed to select tenant");
 			}
 
+			const data = await res.json();
+
+			// Backend should return new tenant-scoped access token
+			setAccessToken(data.accessToken);
+
+			// Reconnect socket with new token
+			initSocket();
+
 			router.replace(`/${tenant.slug}/dashboard`);
 		} catch (err: any) {
 			toast.error(err.message || "Something went wrong");
@@ -89,6 +110,14 @@ export default function SelectWorkspacePage() {
 		return (
 			<div className="h-screen flex items-center justify-center">
 				<p className="text-neutral-700">Loading workspaces...</p>
+			</div>
+		);
+	}
+
+	if (initializing) {
+		return (
+			<div className="h-screen flex items-center justify-center bg-neutral-100">
+				<p className="text-neutral-700">Loading dashboard...</p>
 			</div>
 		);
 	}

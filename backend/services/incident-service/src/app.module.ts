@@ -2,7 +2,17 @@ import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { IncidentModule } from "./modules/incident/incident.module";
 import { AlertModule } from "./modules/alert/alert.module";
+import { EventModule } from "./modules/event/event.module";
+import { ScheduleModule } from "@nestjs/schedule";
+import { IntegrationModule } from "./modules/integration/integration.module";
+import { ThresholdModule } from "./modules/threshold/threshold.module";
+import { RedisModule } from "./modules/redis/redis.module";
+import { QueueModule } from "./modules/queue/queue.module";
+import { RealtimeModule } from "./modules/realtime/realtime.module";
 import { LoggerModule } from "nestjs-pino";
+import { APP_FILTER } from "@nestjs/core";
+import { GlobalExceptionFilter } from "./common/filters/global-exception.filter";
+import * as crypto from "crypto";
 
 @Module({
 	imports: [
@@ -23,10 +33,34 @@ import { LoggerModule } from "nestjs-pino";
 								},
 							}
 						: undefined,
+				// request id for tracing
+				genReqId: (req) => {
+					const existing = req.headers["x-request-id"];
+					if (existing) return existing;
+
+					return crypto.randomUUID();
+				},
+				// attach request id to response header
+				customProps: (req) => ({
+					reqId: req.id,
+				}),
 			},
 		}),
 		IncidentModule,
 		AlertModule,
+		EventModule,
+		ScheduleModule.forRoot(),
+		IntegrationModule,
+		ThresholdModule,
+		RedisModule,
+		QueueModule,
+		RealtimeModule,
+	],
+	providers: [
+		{
+			provide: APP_FILTER,
+			useClass: GlobalExceptionFilter,
+		},
 	],
 })
 export class AppModule {}

@@ -8,6 +8,7 @@ import SeverityCard from "@/components/dashboard/SeverityCard";
 import DashboardSkeleton from "@/components/skeletons/DashboardSkeleton";
 import { incidentApi } from "@/lib/api/incidentApi";
 import { toast } from "sonner";
+import { getSocket, initSocket } from "@/lib/socket";
 
 type DashboardData = {
 	stats: {
@@ -86,12 +87,37 @@ export default function DashboardPage() {
 	};
 
 	useEffect(() => {
+		const ensureSocket = () => {
+			let socket = getSocket();
+
+			// 🔥 If socket not initialized (page refresh case)
+			if (!socket) {
+				socket = initSocket();
+			}
+
+			return socket;
+		};
+
+		const socket = ensureSocket();
+		if (!socket) return;
+
+		const refreshDashboard = async () => {
+			try {
+				const res = await incidentApi.get("/incidents/dashboard");
+				setData(res.data);
+			} catch (err) {
+				console.error("Failed to refresh dashboard", err);
+			}
+		};
+
+		socket.on("alert-created", refreshDashboard);
+		socket.on("incident-escalated", refreshDashboard);
+
 		const fetchDashboard = async () => {
 			try {
 				const res = await incidentApi.get("/incidents/dashboard");
 				setData(res.data);
 			} catch (err) {
-				console.error("Failed to fetch dashboard data", err);
 				toast.error("Failed to fetch dashboard data");
 			} finally {
 				setLoading(false);
@@ -99,6 +125,11 @@ export default function DashboardPage() {
 		};
 
 		fetchDashboard();
+
+		return () => {
+			socket.off("alert-created", refreshDashboard);
+			socket.off("incident-escalated", refreshDashboard);
+		};
 	}, []);
 
 	if (loading) return <DashboardSkeleton />;

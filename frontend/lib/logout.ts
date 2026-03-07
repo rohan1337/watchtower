@@ -1,3 +1,6 @@
+import { getSocket } from "./socket";
+import { setAccessToken } from "./tokenStore";
+
 let logoutHandler: (() => void) | null = null;
 
 export function setLogoutHandler(fn: () => void) {
@@ -5,7 +8,10 @@ export function setLogoutHandler(fn: () => void) {
 }
 
 export function triggerLogout() {
-	if (logoutHandler) {
-		logoutHandler();
-	}
+	setAccessToken(null);
+
+	const socket = getSocket();
+	socket?.disconnect();
+
+	window.location.href = "/login";
 }

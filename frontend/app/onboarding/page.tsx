@@ -16,13 +16,18 @@ export default function OnboardingPage() {
 			return;
 		}
 
-		if (!user.tenants || user.tenants.length === 0) {
+		if (!user.tenants?.length) {
 			router.replace("/create-workspace");
 			return;
 		}
 
+		// if (user.tenants.length === 1) {
+		// 	router.replace(`/${user.tenants[0].slug}/dashboard`);
+		// 	return;
+		// }
+
 		if (user.tenants.length === 1) {
-			router.replace(`/${user.tenants[0].slug}/dashboard`);
+			router.replace("/select-workspace");
 			return;
 		}
 

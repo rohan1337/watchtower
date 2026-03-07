@@ -1,11 +1,9 @@
 import { NestFactory } from "@nestjs/core";
 import { Transport } from "@nestjs/microservices";
 import { AppModule } from "./app.module";
-import { Logger } from "@nestjs/common";
+import { Logger } from "nestjs-pino";
 
 async function bootstrap() {
-	const logger = new Logger("Bootstrap");
-
 	const app = await NestFactory.createMicroservice(AppModule, {
 		transport: Transport.REDIS,
 		options: {
@@ -15,8 +13,21 @@ async function bootstrap() {
 		bufferLogs: true,
 	});
 
+	// Use Pino as Nest logger
+	app.useLogger(app.get(Logger));
+
+	const logger = app.get(Logger);
+
 	await app.listen();
-	logger.log(`Notification Service is running`);
+
+	logger.log(
+		{
+			service: "notification-service",
+			port: process.env.PORT ?? null,
+			env: process.env.NODE_ENV,
+		},
+		"Service started",
+	);
 }
 
 bootstrap();

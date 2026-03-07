@@ -16,8 +16,9 @@ import { ForgotPasswordDto } from "./dtos/forgot-password.dto";
 import { ResetPasswordDto } from "./dtos/reset-password.dto";
 import type { Response } from "express";
 import { SelectWorkspaceDto } from "./dtos/select-workspace.dto";
-import { JwtAuthGuard } from "./guards/jwt-auth.guard";
+import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 import { PinoLogger } from "nestjs-pino";
+import { TenantRequired } from "src/common/decorators/tenant-required.decorator";
 
 @Controller("auth-ser/api/auth")
 export class AuthController {
@@ -29,10 +30,15 @@ export class AuthController {
 	}
 
 	@Post("register")
-	async register(@Body() dto: RegisterDto) {
-		this.logger.info({ email: dto.email }, "Register request received");
+	async register(@Body() dto: RegisterDto, @Req() req) {
+		const requestId = req.id;
 
-		return this.authService.register(dto);
+		this.logger.info(
+			{ email: dto.email, requestId },
+			"Register request received",
+		);
+
+		return this.authService.register(dto, requestId);
 	}
 
 	@Post("verify-email")
@@ -64,7 +70,7 @@ export class AuthController {
 				userId: req.user.sub,
 				tenantId: dto.tenantId,
 			},
-			"Select tenant request",
+			"Select workspace request received",
 		);
 
 		return this.authService.selectWorkspace(
@@ -103,6 +109,7 @@ export class AuthController {
 	}
 
 	@UseGuards(JwtAuthGuard)
+	@TenantRequired()
 	@Post("logout")
 	logout(@Req() req, @Res({ passthrough: true }) res: Response) {
 		const userId = req.user.sub;
@@ -115,12 +122,13 @@ export class AuthController {
 	@UseGuards(JwtAuthGuard)
 	@Get("me")
 	me(@Req() req) {
-		this.logger.info({ userId: req.user.sub }, "Me endpoint accessed");
+		this.logger.debug({ userId: req.user.sub }, "Me endpoint accessed");
 
 		return this.authService.me(req.user);
 	}
 
 	@UseGuards(JwtAuthGuard)
+	@TenantRequired()
 	@Post("bulk")
 	getUsersByIds(@Body() body: { ids: string[] }) {
 		this.logger.info(

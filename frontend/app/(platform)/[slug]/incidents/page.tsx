@@ -10,6 +10,7 @@ import TableContainer from "@/components/tables/TableContainer";
 import PageHeader from "@/components/common/PageHeader";
 import { incidentApi } from "@/lib/api/incidentApi";
 import { toast } from "sonner";
+import { getSocket, initSocket } from "@/lib/socket";
 
 type Incident = {
 	id: string;
@@ -84,12 +85,33 @@ export default function IncidentsPage() {
 	};
 
 	useEffect(() => {
+		let socket = getSocket();
+
+		// 🔥 If socket not initialized (page refresh case)
+		if (!socket) {
+			socket = initSocket();
+		}
+
+		// Still null → no token yet
+		if (!socket) return;
+
+		const handleIncidentEscalated = (data: any) => {
+			setIncidents((prev) =>
+				prev.map((incident) =>
+					incident.id === data.incidentId
+						? { ...incident, severity: data.severity }
+						: incident,
+				),
+			);
+		};
+
+		socket.on("incident-escalated", handleIncidentEscalated);
+
 		const fetchIncidents = async () => {
 			try {
-				const res = await await incidentApi.get("/incidents");
+				const res = await incidentApi.get("/incidents");
 				setIncidents(res.data);
 			} catch (err) {
-				console.log("Failed to fetch incidents:", err);
 				toast.error("Failed to fetch incidents");
 			} finally {
 				setLoading(false);
@@ -97,6 +119,10 @@ export default function IncidentsPage() {
 		};
 
 		fetchIncidents();
+
+		return () => {
+			socket?.off("incident-escalated", handleIncidentEscalated);
+		};
 	}, []);
 
 	const sortedIncidents = [...incidents].sort((a, b) => {

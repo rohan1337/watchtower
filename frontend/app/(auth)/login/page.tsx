@@ -9,6 +9,8 @@ import AuthError from "@/components/auth/AuthError";
 import AuthButton from "@/components/auth/AuthButton";
 import AuthFooterLink from "@/components/auth/AuthFooterLink";
 import { useAuth } from "../../contexts/AuthContext";
+import { setAccessToken } from "@/lib/tokenStore";
+import { initSocket } from "@/lib/socket";
 
 const BASE_URL_AUTH_SER = process.env.NEXT_PUBLIC_API_BASE_URL_AUTH_SER;
 
@@ -60,6 +62,9 @@ const LoginPage = () => {
 				setErrors([data.message || "Invalid credentials"]);
 				return;
 			}
+
+			// Store access token globally
+			setAccessToken(data.accessToken);
 
 			// Set user immediately
 			setUser({

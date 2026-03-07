@@ -8,6 +8,8 @@ import AuthInput from "@/components/auth/AuthInput";
 import AuthSelect from "@/components/auth/AuthSelect";
 import AuthError from "@/components/auth/AuthError";
 import AuthButton from "@/components/auth/AuthButton";
+import { setAccessToken } from "@/lib/tokenStore";
+import { initSocket } from "@/lib/socket";
 
 const BASE_URL_AUTH_SER = process.env.NEXT_PUBLIC_API_BASE_URL_AUTH_SER;
 
@@ -66,6 +68,14 @@ const CreateWorkspacePage = () => {
 			if (!selectRes.ok) {
 				throw new Error("Failed to activate workspace session");
 			}
+
+			const selectData = await selectRes.json();
+
+			// 🔥 Store new tenant token
+			setAccessToken(selectData.accessToken);
+
+			// 🔥 Reinitialize socket with new tenant token
+			initSocket();
 
 			toast.success("Workspace created successfully!");
 

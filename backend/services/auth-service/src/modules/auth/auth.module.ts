@@ -5,7 +5,7 @@ import { PrismaService } from "../../database/prisma.service";
 import { CleanupService } from "./cleanup.service";
 import { ClientsModule, Transport } from "@nestjs/microservices";
 import { JwtModule } from "@nestjs/jwt";
-import { JwtStrategy } from "./strategies/jwt.strategy";
+import { JwtStrategy } from "../../common/strategies/jwt.strategy";
 import { PassportModule } from "@nestjs/passport";
 
 @Module({

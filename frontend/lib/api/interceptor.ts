@@ -1,6 +1,7 @@
 import { AxiosInstance } from "axios";
 import { authApi } from "./authApi";
 import { triggerLogout } from "../logout";
+import { setAccessToken } from "../tokenStore";
 
 let isRefreshing = false;
 let refreshPromise: Promise<void> | null = null;
@@ -25,7 +26,11 @@ export function applyAuthInterceptor(instance: AxiosInstance) {
 
 						refreshPromise = authApi
 							.post("/auth/refresh")
-							.then(() => {
+							.then((res) => {
+								const newToken = res.data.accessToken;
+
+								setAccessToken(newToken); // 🔥 important
+
 								isRefreshing = false;
 								refreshPromise = null;
 							})

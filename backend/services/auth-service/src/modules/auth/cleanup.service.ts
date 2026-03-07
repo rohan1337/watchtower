@@ -14,21 +14,33 @@ export class CleanupService {
 
 	@Cron("0 */2 * * *")
 	async cleanupExpired() {
-		this.logger.info("Starting email verification cleanup job");
+		const now = new Date();
+
+		this.logger.info(
+			{ timestamp: now.toISOString() },
+			"Starting email verification cleanup job",
+		);
 
 		try {
 			const deleted = await this.prisma.emailVerification.deleteMany({
 				where: {
-					expiresAt: { lt: new Date() },
+					expiresAt: { lt: now },
 				},
 			});
 
-			this.logger.info(
-				{ deletedCount: deleted.count },
-				"Cleanup job completed",
-			);
+			if (deleted.count === 0) {
+				this.logger.debug("No expired verification records found");
+			} else {
+				this.logger.info(
+					{ deletedCount: deleted.count },
+					"Expired verification records cleaned",
+				);
+			}
 		} catch (error) {
-			this.logger.error({ err: error }, "Cleanup job failed");
+			this.logger.error(
+				{ err: error },
+				"Email verification cleanup job failed",
+			);
 		}
 	}
 }
