@@ -15,9 +15,12 @@ export class NotificationController {
 
 	@EventPattern("send_email")
 	async handleSendEmail(@Payload() data: SendEmailEvent) {
-		const { email, template } = data;
+		const { email, template, requestId } = data;
 
-		this.logger.info({ email, template }, "Received send_email event");
+		this.logger.info(
+			{ email, template, requestId },
+			"Received send_email event",
+		);
 
 		try {
 			await this.notificationService.sendEmail(data);
@@ -31,6 +34,7 @@ export class NotificationController {
 				{ email, template, err: error },
 				"Email event processing failed",
 			);
+
 			throw error;
 		}
 	}

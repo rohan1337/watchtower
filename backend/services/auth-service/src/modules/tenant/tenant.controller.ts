@@ -9,7 +9,7 @@ import {
 } from "@nestjs/common";
 import { TenantService } from "./tenant.service";
 import { CreateTenantDto } from "./dtos/create-tenant.dto";
-import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 import { PinoLogger } from "nestjs-pino";
 
 @Controller("auth-ser/api/tenants")
@@ -24,19 +24,24 @@ export class TenantController {
 	@UseGuards(JwtAuthGuard)
 	@Post()
 	create(@Req() req, @Body() dto: CreateTenantDto) {
+		const requestId = req.id;
+
 		this.logger.info(
 			{
+				requestId,
 				userId: req.user.sub,
 				tenantName: dto.name,
 			},
 			"Create tenant request received",
 		);
 
-		return this.tenantService.create(req.user.sub, dto);
+		return this.tenantService.create(req.user.sub, dto, requestId);
 	}
 
 	@Get("slug/:slug")
 	findBySlug(@Param("slug") slug: string) {
+		this.logger.debug({ slug }, "Tenant lookup by slug");
+
 		return this.tenantService.findBySlug(slug);
 	}
 }

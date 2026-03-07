@@ -2,14 +2,17 @@ import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
 import { BadRequestException, ValidationPipe } from "@nestjs/common";
 import cookieParser from "cookie-parser";
-import { Logger } from "@nestjs/common";
+import { Logger } from "nestjs-pino";
 
 async function bootstrap() {
-	const logger = new Logger("Bootstrap");
-
 	const app = await NestFactory.create(AppModule, {
 		bufferLogs: true,
 	});
+
+	// Use Pino as Nest logger
+	app.useLogger(app.get(Logger));
+
+	const logger = app.get(Logger);
 
 	app.useGlobalPipes(
 		new ValidationPipe({
@@ -38,7 +41,12 @@ async function bootstrap() {
 	await app.listen(process.env.PORT ?? 3001);
 
 	logger.log(
-		`Authentication Service is running on port ${process.env.PORT ?? 3001}`,
+		{
+			service: "auth-service",
+			port: process.env.PORT ?? 3001,
+			env: process.env.NODE_ENV,
+		},
+		"Service started",
 	);
 }
 bootstrap();

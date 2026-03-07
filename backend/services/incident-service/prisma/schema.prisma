@@ -33,22 +33,44 @@ enum AlertStatus {
     RESOLVED
 }
 
-model Incident {
-    id          String         @id @default(uuid())
-    title       String
-    description String?
-    status      IncidentStatus @default(OPEN)
-    severity    Severity       @default(MEDIUM)
+enum EventType {
+    ERROR
+    METRIC
+    SECURITY
+}
 
+enum IntegrationProvider {
+    WEBHOOK
+    STRIPE
+    GITHUB
+    CUSTOM
+}
+
+model Incident {
+    id            String         @id @default(uuid())
+    title         String
+    description   String?
+    service       String
+    status        IncidentStatus @default(OPEN)
+    severity      Severity       @default(MEDIUM)
+    severityScore Int            @default(0)
+
+    fingerprint String
     tenantId    String
     createdById String
+
+    alertCount  Int       @default(0)
+    lastAlertAt DateTime?
+    resolvedAt  DateTime?
 
     alerts Alert[]
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
+    @@unique([tenantId, fingerprint, status])
     @@index([tenantId])
+    @@index([fingerprint])
 }
 
 model Alert {
@@ -56,10 +78,14 @@ model Alert {
     message String
     source  String?
 
-    status AlertStatus @default(OPEN)
+    service     String
+    fingerprint String
 
-    incidentId String
-    incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+    severity Severity
+    status   AlertStatus @default(OPEN)
+
+    incidentId String?
+    incident   Incident? @relation(fields: [incidentId], references: [id], onDelete: Cascade)
 
     tenantId String
 
@@ -67,4 +93,71 @@ model Alert {
 
     @@index([tenantId])
     @@index([incidentId])
+}
+
+model Event {
+    id      String    @id @default(uuid())
+    type    EventType
+    source  String
+    message String
+    service String
+
+    severity Severity
+
+    tenantId String
+
+    createdAt DateTime @default(now())
+
+    @@index([tenantId])
+}
+
+model ThresholdConfig {
+    id String @id @default(uuid())
+
+    tenantId String
+    service  String? // optional for per-service override
+
+    mediumCount Int @default(10)
+    lowCount    Int @default(20)
+    highCount   Int @default(1)
+
+    mediumWindowSeconds Int @default(120)
+    lowWindowSeconds    Int @default(60)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([tenantId])
+    @@index([service])
+}
+
+model Integration {
+    id       String  @id @default(uuid())
+    name     String
+    isActive Boolean @default(true)
+
+    apiKey   String  @unique
+    secret   String?
+    metadata Json?
+
+    provider IntegrationProvider
+    tenantId String
+
+    keys IntegrationKey[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+model IntegrationKey {
+    id            String    @id @default(uuid())
+    hashedKey     String    @unique
+    isPrimary     Boolean   @default(false)
+    isActive      Boolean   @default(true)
+    expiresAt     DateTime?
+    integrationId String
+
+    integration Integration @relation(fields: [integrationId], references: [id])
+
+    createdAt DateTime @default(now())
 }

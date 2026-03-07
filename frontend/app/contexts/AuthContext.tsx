@@ -42,7 +42,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 	const fetchUser = async () => {
 		try {
 			const res = await authApi.get("/auth/me");
-			setUser(res.data.user);
+			setUser({
+				id: res.data.user.id,
+				tenants: res.data.user.tenants || [],
+				selectedTenantId: res.data.user.selectedTenantId ?? null,
+			});
 		} catch {
 			setUser(null);
 		} finally {

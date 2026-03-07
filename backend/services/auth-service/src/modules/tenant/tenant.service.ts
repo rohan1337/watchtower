@@ -21,22 +21,33 @@ export class TenantService {
 		let slug = base;
 		let counter = 1;
 
+		this.logger.debug({ baseSlug: base }, "Generating unique tenant slug");
+
 		while (await this.prisma.tenant.findUnique({ where: { slug } })) {
+			this.logger.debug({ slug }, "Slug already exists, generating new");
+
 			slug = `${base}-${counter}`;
 			counter++;
 		}
 
+		this.logger.debug({ finalSlug: slug }, "Unique slug generated");
+
 		return slug;
 	}
 
-	async create(userId: string, dto: CreateTenantDto) {
+	async create(userId: string, dto: CreateTenantDto, requestId?: string) {
 		this.logger.info(
-			{ userId, tenantName: dto.name },
+			{ userId, tenantName: dto.name, requestId },
 			"Tenant creation initiated",
 		);
 
 		try {
 			const slug = await this.generateUniqueSlug(dto.name);
+
+			this.logger.debug(
+				{ userId, slug },
+				"Creating tenant record in database",
+			);
 
 			const tenant = await this.prisma.tenant.create({
 				data: {
@@ -52,7 +63,12 @@ export class TenantService {
 			});
 
 			this.logger.info(
-				{ userId, tenantId: tenant.id },
+				{
+					requestId,
+					userId,
+					tenantId: tenant.id,
+					slug: tenant.slug,
+				},
 				"Tenant created successfully",
 			);
 
@@ -64,19 +80,36 @@ export class TenantService {
 				},
 			};
 		} catch (error) {
-			this.logger.error({ userId, err: error }, "Tenant creation failed");
+			this.logger.error(
+				{
+					requestId,
+					userId,
+					err: error,
+				},
+				"Tenant creation failed",
+			);
+
 			throw error;
 		}
 	}
 
 	async findBySlug(slug: string) {
+		this.logger.debug({ slug }, "Searching tenant by slug");
+
 		const tenant = await this.prisma.tenant.findUnique({
 			where: { slug },
 		});
 
 		if (!tenant) {
+			this.logger.warn({ slug }, "Tenant not found");
+
 			throw new NotFoundException("Tenant not found");
 		}
+
+		this.logger.debug(
+			{ tenantId: tenant.id, slug },
+			"Tenant found successfully",
+		);
 
 		return {
 			id: tenant.id,

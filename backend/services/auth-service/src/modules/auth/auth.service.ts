@@ -42,12 +42,14 @@ export class AuthService implements OnModuleInit {
 
 	private generateAccessToken(
 		userId: string,
+		scope?: "global" | "tenant",
 		tenantId?: string,
 		role?: string,
 	) {
 		return this.jwtService.sign(
 			{
 				sub: userId,
+				scope,
 				tenantId,
 				role,
 			},
@@ -77,16 +79,22 @@ export class AuthService implements OnModuleInit {
 			rotateRefreshToken?: boolean;
 		},
 	) {
+		const scope = options?.tenantId ? "tenant" : "global";
 		const tenantId = options?.tenantId;
 		const role = options?.role;
 		const rotateRefreshToken = options?.rotateRefreshToken ?? false;
 
 		this.logger.debug(
-			{ userId, tenantId, rotateRefreshToken },
+			{ userId, scope, tenantId, rotateRefreshToken },
 			"Issuing auth cookies",
 		);
 
-		const accessToken = this.generateAccessToken(userId, tenantId, role);
+		const accessToken = this.generateAccessToken(
+			userId,
+			scope,
+			tenantId,
+			role,
+		);
 
 		res.cookie("access_token", accessToken, {
 			httpOnly: true,
@@ -112,14 +120,19 @@ export class AuthService implements OnModuleInit {
 				maxAge: 7 * 24 * 60 * 60 * 1000,
 			});
 		}
+
+		return { accessToken };
 	}
 
 	// =========================
 	// REGISTER
 	// =========================
 
-	async register(dto: RegisterDto) {
-		this.logger.info({ email: dto.email }, "Registration initiated");
+	async register(dto: RegisterDto, requestId?: string) {
+		this.logger.info(
+			{ email: dto.email, requestId },
+			"Registration initiated",
+		);
 
 		const existingUser = await this.prisma.user.findUnique({
 			where: { email: dto.email },
@@ -127,14 +140,21 @@ export class AuthService implements OnModuleInit {
 
 		if (existingUser) {
 			this.logger.warn(
-				{ email: dto.email },
-				"Registration failed: email exists",
+				{ email: dto.email, requestId },
+				"Registration failed: email already registered",
 			);
+
 			throw new BadRequestException("Email already registered");
 		}
 
 		const token = randomUUID();
+
 		const hashedPassword = await bcrypt.hash(dto.password, 10);
+
+		this.logger.debug(
+			{ email: dto.email },
+			"Creating email verification entry",
+		);
 
 		await this.prisma.emailVerification.deleteMany({
 			where: { email: dto.email },
@@ -154,9 +174,13 @@ export class AuthService implements OnModuleInit {
 			email: dto.email,
 			token,
 			template: "VERIFY_EMAIL",
+			requestId,
 		});
 
-		this.logger.info({ email: dto.email }, "Verification email sent");
+		this.logger.info(
+			{ email: dto.email, requestId },
+			"Verification email queued",
+		);
 
 		return { success: true, message: "Verification email sent" };
 	}
@@ -219,41 +243,42 @@ export class AuthService implements OnModuleInit {
 		});
 
 		if (!user || !user.passwordHash) {
+			this.logger.warn({ email: dto.email }, "Login failed");
+
 			throw new BadRequestException("Invalid credentials");
 		}
 
 		const isValid = await bcrypt.compare(dto.password, user.passwordHash);
 
 		if (!isValid) {
+			this.logger.warn({ email: dto.email }, "Invalid password attempt");
+
 			throw new BadRequestException("Invalid credentials");
 		}
+
+		this.logger.debug({ userId: user.id }, "Credentials validated");
 
 		const memberships = await this.prisma.membership.findMany({
 			where: { userId: user.id },
 			include: { tenant: true },
 		});
 
-		// 🔥 CASE 1: No tenants → global session
-		if (memberships.length === 0) {
-			await this.issueAuthCookies(res, user.id);
-		}
+		this.logger.debug(
+			{ userId: user.id, tenantCount: memberships.length },
+			"User memberships fetched",
+		);
 
-		// 🔥 CASE 2: Exactly one tenant → auto-scope session
-		else if (memberships.length === 1) {
-			const membership = memberships[0];
+		const { accessToken } = await this.issueAuthCookies(res, user.id, {
+			rotateRefreshToken: true,
+		});
 
-			await this.issueAuthCookies(res, user.id, {
-				tenantId: membership.tenantId,
-				role: membership.role,
-			});
-		}
-
-		// 🔥 CASE 3: Multiple tenants → global session (force selection)
-		else {
-			await this.issueAuthCookies(res, user.id);
-		}
+		this.logger.debug(
+			{ userId: user.id },
+			"Access and refresh tokens issued",
+		);
 
 		return {
+			accessToken,
 			user: {
 				id: user.id,
 				email: user.email,
@@ -282,7 +307,7 @@ export class AuthService implements OnModuleInit {
 			throw new BadRequestException("Invalid tenant selection");
 		}
 
-		await this.issueAuthCookies(res, userId, {
+		const { accessToken } = await this.issueAuthCookies(res, userId, {
 			tenantId,
 			role: membership.role,
 			rotateRefreshToken: false,
@@ -290,7 +315,7 @@ export class AuthService implements OnModuleInit {
 
 		this.logger.info({ userId, tenantId }, "Tenant selected");
 
-		return { success: true };
+		return { success: true, accessToken };
 	}
 
 	// =========================
@@ -366,6 +391,8 @@ export class AuthService implements OnModuleInit {
 	async forgotPassword(dto: ForgotPasswordDto) {
 		this.logger.info({ email: dto.email }, "Password reset requested");
 
+		const requestId = randomUUID();
+
 		const user = await this.prisma.user.findUnique({
 			where: { email: dto.email },
 		});
@@ -388,6 +415,7 @@ export class AuthService implements OnModuleInit {
 			email: user.email,
 			token: rawToken,
 			template: "RESET_PASSWORD",
+			requestId, // 🔥 propagate request id
 		});
 
 		this.logger.info({ userId: user.id }, "Password reset email sent");

@@ -10,6 +10,7 @@ import TableContainer from "@/components/tables/TableContainer";
 import TableHeader from "@/components/tables/TableHeader";
 import { incidentApi } from "@/lib/api/incidentApi";
 import { toast } from "sonner";
+import { getSocket, initSocket } from "@/lib/socket";
 
 type Alert = {
 	id: string;
@@ -70,12 +71,59 @@ const AlertsPage = () => {
 	};
 
 	useEffect(() => {
+		let socket = getSocket();
+
+		// 🔥 If user refreshed page, socket may not exist
+		if (!socket) {
+			socket = initSocket();
+		}
+
+		// Still null? Probably token not ready yet.
+		if (!socket) return;
+
+		const alertBuffer: Alert[] = [];
+		let flushTimeout: NodeJS.Timeout | null = null;
+		const tenantSlug = Array.isArray(slug) ? slug[0] : slug;
+
+		const handleAlertCreated = (data: any) => {
+			if (!tenantSlug || data.tenantId !== tenantSlug) return;
+
+			alertBuffer.push(data.alert);
+
+			if (!flushTimeout) {
+				flushTimeout = setTimeout(() => {
+					setAlerts((prev) => {
+						const newAlerts = alertBuffer.filter(
+							(a) => !prev.some((p) => p.id === a.id),
+						);
+						alertBuffer.length = 0;
+						flushTimeout = null;
+						return [...newAlerts, ...prev];
+					});
+				}, 100); // batch window
+			}
+		};
+
+		const handleIncidentEscalated = (data: any) => {
+			if (!tenantSlug || data.tenantId !== tenantSlug) return;
+
+			setAlerts((prev) =>
+				prev.map((alert) =>
+					alert.incidentId === data.incidentId
+						? { ...alert, severity: data.severity }
+						: alert,
+				),
+			);
+		};
+
+		socket.on("alert-created", handleAlertCreated);
+		socket.on("incident-escalated", handleIncidentEscalated);
+
 		const fetchAlerts = async () => {
 			try {
 				const res = await incidentApi.get("/alerts");
 				setAlerts(res.data);
 			} catch (err) {
-				console.error("Failed to fetch alerts:", err);
 				toast.error("Failed to fetch alerts");
 			} finally {
 				setLoading(false);
@@ -83,7 +131,12 @@ const AlertsPage = () => {
 		};
 
 		fetchAlerts();
-	}, []);
+
+		return () => {
+			socket?.off("alert-created", handleAlertCreated);
+			socket?.off("incident-escalated", handleIncidentEscalated);
+		};
+	}, [slug]);
 
 	const sortedAlerts = [...alerts].sort((a, b) => {
 		const valueA = a[sortKey];
