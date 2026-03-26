@@ -30,7 +30,7 @@ spec:
 
                 - name: migrate
                   # prettier-ignore
-                  image: {{ .Values.incident.image }}
+                  image: "{{ .Values.incident.image.repository }}:{{ .Values.incident.image.tag }}"
                   imagePullPolicy: {{ .Values.global.imagePullPolicy }}
                   command:
                       - sh
@@ -47,7 +47,7 @@ spec:
             containers:
                 - name: incident-service
                   # prettier-ignore
-                  image: {{ .Values.incident.image }}
+                  image: "{{ .Values.incident.image.repository }}:{{ .Values.incident.image.tag }}"
                   imagePullPolicy: {{ .Values.global.imagePullPolicy }}
 
                   ports:

@@ -18,7 +18,7 @@ spec:
             containers:
                 - name: notification-service
                   # prettier-ignore
-                  image: {{ .Values.notification.image }}
+                  image: "{{ .Values.notification.image.repository }}:{{ .Values.notification.image.tag }}"
                   imagePullPolicy: {{ .Values.global.imagePullPolicy }}
 
                   # 🔹 RESOURCES

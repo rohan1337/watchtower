@@ -30,7 +30,7 @@ spec:
 
                 - name: migrate
                   # prettier-ignore
-                  image: {{ .Values.auth.image }}
+                  image: "{{ .Values.auth.image.repository }}:{{ .Values.auth.image.tag }}"
                   imagePullPolicy: {{ .Values.global.imagePullPolicy }}
                   command:
                       - sh
@@ -47,7 +47,7 @@ spec:
             containers:
                 - name: auth-service
                   # prettier-ignore
-                  image: {{ .Values.auth.image }}
+                  image: "{{ .Values.auth.image.repository }}:{{ .Values.auth.image.tag }}"
                   imagePullPolicy: {{ .Values.global.imagePullPolicy }}
 
                   ports:
