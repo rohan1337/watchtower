@@ -1,0 +1,59 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+    name: watchtower-ingress
+    # prettier-ignore
+    namespace: {{ .Values.namespace }}
+    annotations: {}
+spec:
+    ingressClassName: nginx
+    rules:
+        # prettier-ignore
+        - host: {{ .Values.ingress.host }}
+          http:
+              paths:
+                  - path: /
+                    pathType: Prefix
+                    backend:
+                        service:
+                            name: frontend
+                            port:
+                                number: 80
+
+                  - path: /api/auth
+                    pathType: Prefix
+                    backend:
+                        service:
+                            name: auth-service
+                            port:
+                                # prettier-ignore
+                                number: {{ .Values.auth.port }}
+
+                  - path: /api/tenants
+                    pathType: Prefix
+                    backend:
+                        service:
+                            name: auth-service
+                            port:
+                                # prettier-ignore
+                                number: {{ .Values.auth.port }}
+
+                  - path: /api/incidents
+                    pathType: Prefix
+                    backend:
+                        service:
+                            name: incident-service
+                            port:
+                                # prettier-ignore
+                                number: {{ .Values.incident.port }}
+
+                  - path: /socket.io
+                    pathType: Prefix
+                    backend:
+                        service:
+                            name: incident-service
+                            port:
+                                # prettier-ignore
+                                number: {{ .Values.incident.port }}
+{{- end }}

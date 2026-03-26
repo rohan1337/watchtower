@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+    name: auth-service
+    # prettier-ignore
+    namespace: {{ .Values.namespace }}
+spec:
+    type: ClusterIP
+    selector:
+        app: auth-service
+    ports:
+        # prettier-ignore
+        - port: {{ .Values.auth.port }}
+          targetPort: {{ .Values.auth.port }}

@@ -1,0 +1,60 @@
+namespace: watchtower
+
+global:
+    imagePullPolicy: Always
+    AUTH_URL: http://auth-service
+    INCIDENT_URL: http://incident-service
+    FRONTEND_URL: http://frontend
+    NODE_ENV: production
+
+postgres:
+    enabled: true
+    image: postgres:18-alpine
+    user: postgres
+    password: Watchtower@101
+    storage: 5Gi
+
+redis:
+    enabled: true
+    image: redis:8.2-alpine
+    config:
+        host: redis
+        port: 6379
+
+auth:
+    replicas: 2
+    image:
+        repository: ghcr.io/rohan1337/watchtower-auth-service
+        tag: latest
+    port: 3001
+    config:
+        jwtAccessSecret: 7f1e8c46a3c4a6a0f0fcd1c4a76b9f2e9bb4d6c8a2e5b73f41c899d8c2f5a7e3
+        jwtRefreshSecret: b3c9d44f90ef1a7e64c1bd89b1ac7f8a59df7e7b4f0d2c3a8ff12e7d3a4c69be
+
+incident:
+    replicas: 2
+    image:
+        repository: ghcr.io/rohan1337/watchtower-incident-service
+        tag: latest
+    port: 3003
+
+notification:
+    replicas: 2
+    image:
+        repository: ghcr.io/rohan1337/watchtower-notification-service
+        tag: latest
+    config:
+        smtpHost: smtp.gmail.com
+        smtpUser: royrohan0510@gmail.com
+        smtpPass: bedkktswutipljeg
+
+frontend:
+    replicas: 2
+    image:
+        repository: ghcr.io/rohan1337/watchtower-frontend
+        tag: latest
+    port: 3000
+
+ingress:
+    enabled: true
+    host: watchtower.local

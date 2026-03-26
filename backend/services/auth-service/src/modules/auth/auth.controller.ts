@@ -20,7 +20,7 @@ import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 import { PinoLogger } from "nestjs-pino";
 import { TenantRequired } from "src/common/decorators/tenant-required.decorator";
 
-@Controller("auth-ser/api/auth")
+@Controller("api/auth")
 export class AuthController {
 	constructor(
 		private readonly authService: AuthService,

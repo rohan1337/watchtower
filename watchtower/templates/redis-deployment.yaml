@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: redis
+    # prettier-ignore
+    namespace: {{ .Values.namespace }}
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            app: redis
+    template:
+        metadata:
+            labels:
+                app: redis
+        spec:
+            containers:
+                - name: redis
+                  # prettier-ignore
+                  image: {{ .Values.redis.image }}
+                  ports:
+                      - containerPort: 6379
+                  startupProbe:
+                      exec:
+                          command:
+                              - redis-cli
+                              - ping
+                      failureThreshold: 30
+                      periodSeconds: 10
+                  livenessProbe:
+                      exec:
+                          command:
+                              - redis-cli
+                              - ping
+                      initialDelaySeconds: 10
+                      periodSeconds: 10
+                  readinessProbe:
+                      exec:
+                          command:
+                              - redis-cli
+                              - ping
+                      initialDelaySeconds: 10
+                      periodSeconds: 10
+                  args: ["redis-server", "--appendonly", "yes"]

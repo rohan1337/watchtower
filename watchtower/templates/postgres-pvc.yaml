@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+    name: postgres-pvc
+    # prettier-ignore
+    namespace: {{ .Values.namespace }}
+spec:
+    accessModes:
+        - ReadWriteOnce
+    resources:
+        requests:
+            # prettier-ignore
+            storage: {{ .Values.postgres.storage }}

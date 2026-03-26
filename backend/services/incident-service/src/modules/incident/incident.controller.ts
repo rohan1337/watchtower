@@ -13,7 +13,7 @@ import { UpdateIncidentDto } from "./dtos/update-incident.dto";
 import { TenantRequired } from "src/common/decorators/tenant-required.decorator";
 import { PinoLogger } from "nestjs-pino";
 
-@Controller("inc-ser/api/incidents")
+@Controller("api/incidents")
 @UseGuards(JwtAuthGuard)
 @TenantRequired()
 export class IncidentController {

@@ -1,17 +1,19 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import { Toaster } from "sonner";
 import "./globals.css";
 import { AuthProvider } from "./contexts/AuthContext";
 
-const geistSans = Geist({
-	variable: "--font-geist-sans",
-	subsets: ["latin"],
+const geist = localFont({
+	src: "./fonts/Geist-Regular.woff2",
+	variable: "--font-geist",
+	weight: "100 900",
 });
 
-const geistMono = Geist_Mono({
+const geistMono = localFont({
+	src: "./fonts/GeistMono-Regular.woff2",
 	variable: "--font-geist-mono",
-	subsets: ["latin"],
+	weight: "100 900",
 });
 
 export const metadata: Metadata = {
@@ -27,7 +29,7 @@ export default function RootLayout({
 	return (
 		<html lang="en">
 			<body
-				className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+				className={`${geist.variable} ${geistMono.variable} antialiased`}
 			>
 				<AuthProvider>
 					<Toaster position="top-right" richColors closeButton />

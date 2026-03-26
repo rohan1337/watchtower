@@ -10,7 +10,7 @@ type AuthUser = {
 	role?: string;
 };
 
-@Controller("inc-ser/api/alerts")
+@Controller("api/alerts")
 @UseGuards(JwtAuthGuard)
 @TenantRequired()
 export class AlertController {

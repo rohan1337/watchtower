@@ -12,7 +12,7 @@ import { CreateTenantDto } from "./dtos/create-tenant.dto";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 import { PinoLogger } from "nestjs-pino";
 
-@Controller("auth-ser/api/tenants")
+@Controller("api/tenants")
 export class TenantController {
 	constructor(
 		private readonly tenantService: TenantService,

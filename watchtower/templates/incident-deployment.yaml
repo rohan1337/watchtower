@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: incident-service
+    # prettier-ignore
+    namespace: {{ .Values.namespace }}
+spec:
+    # prettier-ignore
+    replicas: {{ .Values.incident.replicas }}
+    selector:
+        matchLabels:
+            app: incident-service
+    template:
+        metadata:
+            labels:
+                app: incident-service
+        spec:
+            # 🔹 INIT CONTAINERS (DB wait + migration)
+            initContainers:
+                - name: wait-for-db
+                  image: postgres:18-alpine
+                  command:
+                      - sh
+                      - -c
+                      - |
+                          echo "Waiting for Postgres..."
+                          until pg_isready -h postgres -U {{ .Values.postgres.user }}; do
+                              sleep 2
+                          done
+
+                - name: migrate
+                  # prettier-ignore
+                  image: {{ .Values.incident.image }}
+                  imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+                  command:
+                      - sh
+                      - -c
+                      - |
+                          echo "Running migrations..."
+                          npx prisma migrate deploy
+                  envFrom:
+                      - configMapRef:
+                            name: incident-config
+                      - secretRef:
+                            name: incident-secret
+
+            containers:
+                - name: incident-service
+                  # prettier-ignore
+                  image: {{ .Values.incident.image }}
+                  imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+
+                  ports:
+                      # prettier-ignore
+                      - containerPort: {{ .Values.incident.port }}
+
+                  # 🔹 RESOURCES
+                  resources:
+                      requests:
+                          cpu: "250m"
+                          memory: "128Mi"
+                      limits:
+                          cpu: "500m"
+                          memory: "512Mi"
+
+                  # 🔹 LIVENESS PROBE
+                  livenessProbe:
+                      httpGet:
+                          path: /health
+                          # prettier-ignore
+                          port: {{ .Values.incident.port }}
+                      initialDelaySeconds: 30
+                      periodSeconds: 5
+
+                  # 🔹 READINESS PROBE
+                  readinessProbe:
+                      httpGet:
+                          path: /ready
+                          # prettier-ignore
+                          port: {{ .Values.incident.port }}
+                      initialDelaySeconds: 30
+                      periodSeconds: 5
+
+                  envFrom:
+                      - configMapRef:
+                            name: incident-config
+                      - secretRef:
+                            name: incident-secret

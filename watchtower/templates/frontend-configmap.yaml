@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+    name: frontend-config
+    # prettier-ignore
+    namespace: {{ .Values.namespace }}
+data:
+    NEXT_PUBLIC_API_BASE_URL_AUTH_SER: "{{ .Values.global.AUTH_URL }}"
+    NEXT_PUBLIC_API_BASE_URL_INC_SER: "{{ .Values.global.INCIDENT_URL }}"
+    NEXT_PUBLIC_FRONTEND_HOST: "{{ .Values.global.FRONTEND_URL }}"
+    NEXT_PUBLIC_FRONTEND_PORT: "{{ .Values.frontend.port }}"
+    NODE_ENV: "{{ .Values.global.NODE_ENV }}"

@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: notification-service
+    # prettier-ignore
+    namespace: {{ .Values.namespace }}
+spec:
+    # prettier-ignore
+    replicas: {{ .Values.notification.replicas }}
+    selector:
+        matchLabels:
+            app: notification-service
+    template:
+        metadata:
+            labels:
+                app: notification-service
+        spec:
+            containers:
+                - name: notification-service
+                  # prettier-ignore
+                  image: {{ .Values.notification.image }}
+                  imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+
+                  # 🔹 RESOURCES
+                  resources:
+                      requests:
+                          cpu: "250m"
+                          memory: "128Mi"
+                      limits:
+                          cpu: "500m"
+                          memory: "512Mi"
+                  envFrom:
+                      - configMapRef:
+                            name: notification-config
+                      - secretRef:
+                            name: notification-secret

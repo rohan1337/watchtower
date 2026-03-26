@@ -1,0 +1,2 @@
+CREATE DATABASE auth_service_db;
+CREATE DATABASE incident_service_db;

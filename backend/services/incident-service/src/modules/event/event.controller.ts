@@ -5,7 +5,7 @@ import { CreateEventDto } from "./dtos/create-event.dto";
 import { TenantRequired } from "src/common/decorators/tenant-required.decorator";
 import { PinoLogger } from "nestjs-pino";
 
-@Controller("inc-ser/api/events")
+@Controller("api/events")
 @UseGuards(JwtAuthGuard)
 @TenantRequired()
 export class EventController {

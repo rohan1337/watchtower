@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+    name: notification-config
+    # prettier-ignore
+    namespace: {{ .Values.namespace }}
+data:
+    SMTP_HOST: "{{ .Values.notification.config.smtpHost }}"
+    REDIS_HOST: "{{ .Values.redis.config.host }}"
+    REDIS_PORT: "{{ .Values.redis.config.port }}"
+    FRONTEND_URL: "{{ .Values.global.FRONTEND_URL }}"
+    NODE_ENV: "{{ .Values.global.NODE_ENV }}"

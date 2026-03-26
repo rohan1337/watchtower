@@ -5,6 +5,8 @@ import { TenantModule } from "./modules/tenant/tenant.module";
 import { LoggerModule } from "nestjs-pino";
 import { APP_FILTER } from "@nestjs/core";
 import { GlobalExceptionFilter } from "./common/filters/global-exception.filter";
+import { HealthModule } from './modules/health/health.module';
+import { MetricsModule } from './modules/metrics/metrics.module';
 import * as crypto from "crypto";
 
 @Module({
@@ -38,6 +40,8 @@ import * as crypto from "crypto";
 		AuthModule,
 		TenantModule,
 		ScheduleModule.forRoot(),
+		HealthModule,
+		MetricsModule,
 	],
 	providers: [
 		{

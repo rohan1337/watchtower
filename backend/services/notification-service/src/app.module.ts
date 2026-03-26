@@ -4,6 +4,7 @@ import { ConfigModule } from "@nestjs/config";
 import { LoggerModule } from "nestjs-pino";
 import { APP_FILTER } from "@nestjs/core";
 import { GlobalExceptionFilter } from "./common/filters/global-exception.filter";
+import { HealthModule } from './modules/health/health.module';
 import * as crypto from "crypto";
 
 @Module({
@@ -39,6 +40,7 @@ import * as crypto from "crypto";
 			envFilePath: ".env",
 		}),
 		NotificationModule,
+		HealthModule,
 	],
 	providers: [
 		{

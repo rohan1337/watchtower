@@ -14,7 +14,7 @@ import { Public } from "src/common/decorators/public.decorator";
 import { JwtAuthGuard } from "src/common/guards/jwt-auth.guard";
 import { TenantRequired } from "src/common/decorators/tenant-required.decorator";
 
-@Controller("inc-ser/api/integrations")
+@Controller("api/integrations")
 export class IntegrationController {
 	constructor(private readonly integrationService: IntegrationService) {}
 

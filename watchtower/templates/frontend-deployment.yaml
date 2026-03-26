@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: frontend
+    # prettier-ignore
+    namespace: {{ .Values.namespace }}
+spec:
+    # prettier-ignore
+    replicas: {{ .Values.frontend.replicas }}
+    selector:
+        matchLabels:
+            app: frontend
+    template:
+        metadata:
+            labels:
+                app: frontend
+        spec:
+            containers:
+                - name: frontend
+                  # prettier-ignore
+                  image: {{ .Values.frontend.image }}
+                  imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+                  ports:
+                      # prettier-ignore
+                      - containerPort: {{ .Values.frontend.port }}
+                  livenessProbe:
+                      httpGet:
+                          path: /
+                          # prettier-ignore
+                          port: {{ .Values.frontend.port }}
+                      initialDelaySeconds: 30
+                      periodSeconds: 5
+                  readinessProbe:
+                      httpGet:
+                          path: /
+                          # prettier-ignore
+                          port: {{ .Values.frontend.port }}
+                      initialDelaySeconds: 30
+                      periodSeconds: 5
+                  envFrom:
+                      - configMapRef:
+                            name: frontend-config
