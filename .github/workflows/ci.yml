@@ -112,12 +112,9 @@ jobs:
                   # severity: CRITICAL,HIGH
                   severity: CRITICAL
 
-            - name: Tag for GHCR
-              run: |
-                  docker tag watchtower-${{ matrix.service.name }}:${{ github.sha }} \
-                  ghcr.io/${{ github.repository_owner }}/watchtower-${{ matrix.service.name }}:${{ github.sha }}
-
             - name: Push Image
               run: |
-                  docker push ghcr.io/${{ github.repository_owner }}/watchtower-${{ matrix.service.name }}:${{ github.sha }}              run: |
+                  docker push ghcr.io/${{ github.repository_owner }}/watchtower-${{ matrix.service.name }}:${{ github.sha }}
+            - name: Push Image
+              run: |
                   docker push ghcr.io/${{ github.repository_owner }}/watchtower-${{ matrix.service.name }}:${{ github.sha }}

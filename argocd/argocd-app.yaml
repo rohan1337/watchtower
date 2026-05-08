@@ -3,6 +3,12 @@ kind: Application
 metadata:
     name: watchtower
     namespace: argocd
+    annotations:
+        argocd-image-updater.argoproj.io/image-list: frontend=ghcr.io/rohan1337/watchtower-frontend
+        argocd-image-updater.argoproj.io/frontend.update-strategy: latest
+        argocd-image-updater.argoproj.io/frontend.pull-secret: pullsecret:argocd/watchtower-repo
+        argocd-image-updater.argoproj.io/frontend.helm.image-name: frontend.image.repository
+        argocd-image-updater.argoproj.io/frontend.helm.image-tag: frontend.image.tag
 spec:
     project: default
 
