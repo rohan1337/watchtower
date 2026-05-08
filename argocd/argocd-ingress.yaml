@@ -1,0 +1,36 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+    name: argocd-server-ingress
+    namespace: argocd
+    annotations:
+        nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+spec:
+    ingressClassName: nginx
+    tls:
+        - hosts:
+              - argocd.watchtower.local
+          secretName: argocd-tls
+    rules:
+        - host: argocd.watchtower.local
+          http:
+              paths:
+                  - path: /
+                    pathType: Prefix
+                    backend:
+                        service:
+                            name: argocd-server
+                            port:
+                                number: 443
+
+# To create the TLS secret for ArgoCD, run the following command:
+# kubectl create secret tls argocd-tls `
+#   --cert=argocd/_wildcard.watchtower.local.pem `
+#   --key=argocd/_wildcard.watchtower.local-key.pem `
+#   -n argocd
+
+# To apply this Ingress resource, run the following command:
+# kubectl apply -f argocd/argocd-ingress.yaml
+
+# Restart the ingress controller to pick up the new TLS secret:
+# kubectl rollout restart deployment ingress-nginx-controller -n ingress-nginx

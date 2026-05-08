@@ -46,10 +46,10 @@ spec:
                       periodSeconds: 5
                   envFrom:
                       - secretRef:
-                            name: postgres-secret
+                            name: watchtower-postgres-secret
                   volumeMounts:
                       - name: postgres-storage
-                        mountPath: /var/lib/postgresql/data
+                        mountPath: /var/lib/postgresql
                       - name: init-sql
                         mountPath: /docker-entrypoint-initdb.d
             volumes:

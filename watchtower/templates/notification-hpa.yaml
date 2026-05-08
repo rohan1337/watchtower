@@ -1,0 +1,25 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+    name: notification-service-hpa
+    # prettier-ignore
+    namespace: {{ .Values.namespace }}
+spec:
+    scaleTargetRef:
+        apiVersion: apps/v1
+        kind: Deployment
+        name: notification-service
+
+    # prettier-ignore
+    minReplicas: {{ .Values.notification.autoscaling.minReplicas }}
+    # prettier-ignore
+    maxReplicas: {{ .Values.notification.autoscaling.maxReplicas }}
+
+    metrics:
+        - type: Resource
+          resource:
+              name: cpu
+              target:
+                  type: Utilization
+                  # prettier-ignore
+                  averageUtilization: {{ .Values.notification.autoscaling.targetCPUUtilization }}

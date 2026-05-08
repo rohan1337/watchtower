@@ -24,13 +24,15 @@ spec:
                   # 🔹 RESOURCES
                   resources:
                       requests:
-                          cpu: "250m"
-                          memory: "128Mi"
+                          # prettier-ignore
+                          cpu: {{ .Values.notification.resources.requests.cpu }}
+                          memory: {{ .Values.notification.resources.requests.memory }}
                       limits:
-                          cpu: "500m"
-                          memory: "512Mi"
+                          # prettier-ignore
+                          cpu: {{ .Values.notification.resources.limits.cpu }}
+                          memory: {{ .Values.notification.resources.limits.memory }}
                   envFrom:
                       - configMapRef:
                             name: notification-config
                       - secretRef:
-                            name: notification-secret
+                            name: watchtower-notification-secret

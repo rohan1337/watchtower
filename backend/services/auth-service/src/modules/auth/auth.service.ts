@@ -98,8 +98,9 @@ export class AuthService implements OnModuleInit {
 
 		res.cookie("access_token", accessToken, {
 			httpOnly: true,
-			sameSite: "lax",
+			sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
 			secure: process.env.NODE_ENV === "production",
+			path: "/",
 			maxAge: 15 * 60 * 1000,
 		});
 
@@ -115,8 +116,10 @@ export class AuthService implements OnModuleInit {
 
 			res.cookie("refresh_token", refreshToken, {
 				httpOnly: true,
-				sameSite: "lax",
+				sameSite:
+					process.env.NODE_ENV === "production" ? "none" : "lax",
 				secure: process.env.NODE_ENV === "production",
+				path: "/",
 				maxAge: 7 * 24 * 60 * 60 * 1000,
 			});
 		}

@@ -11,7 +11,6 @@ postgres:
     enabled: true
     image: postgres:18-alpine
     user: postgres
-    password: Watchtower@101
     storage: 5Gi
 
 redis:
@@ -20,6 +19,13 @@ redis:
     config:
         host: redis
         port: 6379
+    resources:
+        requests:
+            cpu: 250m
+            memory: 128Mi
+        limits:
+            cpu: 500m
+            memory: 512Mi
 
 auth:
     replicas: 2
@@ -27,9 +33,18 @@ auth:
         repository: ghcr.io/rohan1337/watchtower-auth-service
         tag: latest
     port: 3001
-    config:
-        jwtAccessSecret: 7f1e8c46a3c4a6a0f0fcd1c4a76b9f2e9bb4d6c8a2e5b73f41c899d8c2f5a7e3
-        jwtRefreshSecret: b3c9d44f90ef1a7e64c1bd89b1ac7f8a59df7e7b4f0d2c3a8ff12e7d3a4c69be
+    config: {}
+    resources:
+        requests:
+            cpu: 250m
+            memory: 128Mi
+        limits:
+            cpu: 500m
+            memory: 512Mi
+    autoscaling:
+        minReplicas: 2
+        maxReplicas: 10
+        targetCPUUtilization: 70
 
 incident:
     replicas: 2
@@ -37,6 +52,17 @@ incident:
         repository: ghcr.io/rohan1337/watchtower-incident-service
         tag: latest
     port: 3003
+    resources:
+        requests:
+            cpu: 250m
+            memory: 128Mi
+        limits:
+            cpu: 500m
+            memory: 512Mi
+    autoscaling:
+        minReplicas: 2
+        maxReplicas: 10
+        targetCPUUtilization: 70
 
 notification:
     replicas: 2
@@ -45,8 +71,17 @@ notification:
         tag: latest
     config:
         smtpHost: smtp.gmail.com
-        smtpUser: royrohan0510@gmail.com
-        smtpPass: bedkktswutipljeg
+    resources:
+        requests:
+            cpu: 250m
+            memory: 128Mi
+        limits:
+            cpu: 500m
+            memory: 512Mi
+    autoscaling:
+        minReplicas: 2
+        maxReplicas: 10
+        targetCPUUtilization: 70
 
 frontend:
     replicas: 2
@@ -54,6 +89,20 @@ frontend:
         repository: ghcr.io/rohan1337/watchtower-frontend
         tag: latest
     port: 3000
+    configs:
+        authBaseUrl: "/api/auth"
+        incidentBaseUrl: "/api/incidents"
+    resources:
+        requests:
+            cpu: 250m
+            memory: 128Mi
+        limits:
+            cpu: 500m
+            memory: 512Mi
+    autoscaling:
+        minReplicas: 2
+        maxReplicas: 10
+        targetCPUUtilization: 70
 
 ingress:
     enabled: true

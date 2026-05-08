@@ -38,6 +38,12 @@ async function bootstrap() {
 		credentials: true,
 	});
 
+	// 👇 get Express instance
+	const expressApp = app.getHttpAdapter().getInstance();
+
+	// 👇 now this works
+	expressApp.set("trust proxy", 1);
+
 	await app.listen(process.env.PORT ?? 3001);
 
 	logger.log(

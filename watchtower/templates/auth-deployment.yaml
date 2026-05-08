@@ -42,7 +42,7 @@ spec:
                       - configMapRef:
                             name: auth-config
                       - secretRef:
-                            name: auth-secret
+                            name: watchtower-auth-secret
 
             containers:
                 - name: auth-service
@@ -57,11 +57,13 @@ spec:
                   # 🔹 RESOURCES
                   resources:
                       requests:
-                          cpu: "250m"
-                          memory: "128Mi"
+                          # prettier-ignore
+                          cpu: {{ .Values.auth.resources.requests.cpu }}
+                          memory: {{ .Values.auth.resources.requests.memory }}
                       limits:
-                          cpu: "500m"
-                          memory: "512Mi"
+                          # prettier-ignore
+                          cpu: {{ .Values.auth.resources.limits.cpu }}
+                          memory: {{ .Values.auth.resources.limits.memory }}
 
                   # 🔹 LIVENESS PROBE
                   livenessProbe:
@@ -85,4 +87,4 @@ spec:
                       - configMapRef:
                             name: auth-config
                       - secretRef:
-                            name: auth-secret
+                            name: watchtower-auth-secret

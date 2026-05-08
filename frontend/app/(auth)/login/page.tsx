@@ -45,6 +45,7 @@ const LoginPage = () => {
 
 		if (!formData.email || !formData.password) {
 			setErrors(["Email and password is required"]);
+			setLoading(false);
 			return;
 		}
 

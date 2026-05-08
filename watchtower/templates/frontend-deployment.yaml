@@ -23,6 +23,15 @@ spec:
                   ports:
                       # prettier-ignore
                       - containerPort: {{ .Values.frontend.port }}
+                  resources:
+                      requests:
+                          # prettier-ignore
+                          cpu: {{ .Values.frontend.resources.requests.cpu }}
+                          memory: {{ .Values.frontend.resources.requests.memory }}
+                      limits:
+                          # prettier-ignore
+                          cpu: {{ .Values.frontend.resources.limits.cpu }}
+                          memory: {{ .Values.frontend.resources.limits.memory }}
                   livenessProbe:
                       httpGet:
                           path: /

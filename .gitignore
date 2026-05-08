@@ -1,3 +1,8 @@
 node_modules
 .env
+.env.auth
+.env.incident
+.env.notification
 watchtower.code-workspace
+certs/
+!certs/.gitkeep

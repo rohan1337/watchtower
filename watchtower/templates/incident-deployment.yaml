@@ -42,7 +42,7 @@ spec:
                       - configMapRef:
                             name: incident-config
                       - secretRef:
-                            name: incident-secret
+                            name: watchtower-incident-secret
 
             containers:
                 - name: incident-service
@@ -57,11 +57,13 @@ spec:
                   # 🔹 RESOURCES
                   resources:
                       requests:
-                          cpu: "250m"
-                          memory: "128Mi"
+                          # prettier-ignore
+                          cpu: {{ .Values.incident.resources.requests.cpu }}
+                          memory: {{ .Values.incident.resources.requests.memory }}
                       limits:
-                          cpu: "500m"
-                          memory: "512Mi"
+                          # prettier-ignore
+                          cpu: {{ .Values.incident.resources.limits.cpu }}
+                          memory: {{ .Values.incident.resources.limits.memory }}
 
                   # 🔹 LIVENESS PROBE
                   livenessProbe:
@@ -85,4 +87,4 @@ spec:
                       - configMapRef:
                             name: incident-config
                       - secretRef:
-                            name: incident-secret
+                            name: watchtower-incident-secret

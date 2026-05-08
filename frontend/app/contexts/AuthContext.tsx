@@ -6,10 +6,12 @@ import {
 	useCallback,
 	useContext,
 	useEffect,
+	useRef,
 	useState,
 } from "react";
 import { useRouter } from "next/navigation";
 import { setLogoutHandler } from "@/lib/logout";
+import { usePathname } from "next/navigation";
 
 type Tenant = {
 	id: string;
@@ -36,23 +38,40 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
 	const router = useRouter();
+	const pathname = usePathname();
 	const [user, setUser] = useState<User | null>(null);
 	const [loading, setLoading] = useState(true);
+	const hasTriedRefreshRef = useRef(false);
 
-	const fetchUser = async () => {
+	const fetchUser = useCallback(async () => {
 		try {
 			const res = await authApi.get("/auth/me");
+
 			setUser({
 				id: res.data.user.id,
 				tenants: res.data.user.tenants || [],
 				selectedTenantId: res.data.user.selectedTenantId ?? null,
 			});
+
+			// reset retry only on success
+			hasTriedRefreshRef.current = false;
 		} catch {
-			setUser(null);
+			if (!hasTriedRefreshRef.current) {
+				hasTriedRefreshRef.current = true;
+
+				try {
+					await authApi.post("/auth/refresh");
+					return await fetchUser();
+				} catch {
+					setUser(null);
+				}
+			} else {
+				setUser(null);
+			}
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, []);
 
 	const signOut = useCallback(async () => {
 		try {
@@ -64,8 +83,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 	}, [router]);
 
 	useEffect(() => {
+		const publicRoutes = ["/login", "/register", "/email-sent"];
+
+		if (publicRoutes.includes(pathname)) {
+			setLoading(false);
+			return;
+		}
+
 		fetchUser();
-	}, []);
+	}, [pathname]);
 
 	useEffect(() => {
 		setLogoutHandler(signOut);

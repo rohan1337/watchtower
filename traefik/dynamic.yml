@@ -1,0 +1,85 @@
+http:
+    routers:
+        frontend:
+            rule: "Host(`watchtower.local`)"
+            entryPoints: ["websecure"]
+            service: "frontend-service"
+            middlewares: ["secure-headers"]
+            tls: {}
+            priority: 1
+
+        auth:
+            rule: "Host(`watchtower.local`) && (PathPrefix(`/api/auth`) || PathPrefix(`/api/tenants`))"
+            entryPoints: ["websecure"]
+            service: "auth-service"
+            middlewares: ["secure-headers"]
+            tls: {}
+            priority: 10
+
+        incident-api:
+            rule: "Host(`watchtower.local`) && (PathPrefix(`/api/incidents`) || PathPrefix(`/api/alerts`) || PathPrefix(`/api/integrations`) || PathPrefix(`/api/events`))"
+            entryPoints: ["websecure"]
+            service: "incident-service"
+            middlewares: ["secure-headers"]
+            tls: {}
+            priority: 10
+
+        # Dedicated router for WebSockets
+        incident-ws:
+            rule: "Host(`watchtower.local`) && PathPrefix(`/socket.io`)"
+            entryPoints: ["websecure"]
+            service: "incident-service"
+            middlewares: ["secure-headers"]
+            tls: {}
+            priority: 100 # Higher priority
+
+        dashboard:
+            rule: "Host(`traefik.watchtower.local`)"
+            entryPoints: ["websecure"]
+            service: "api@internal"
+            middlewares:
+                - "dashboard-auth"
+                - "secure-headers"
+            tls: {}
+
+    services:
+        frontend-service:
+            loadBalancer:
+                servers:
+                    - url: "http://frontend:3000"
+        auth-service:
+            loadBalancer:
+                servers:
+                    - url: "http://auth-service:3001"
+        incident-service:
+            loadBalancer:
+                sticky:
+                    cookie:
+                        name: "traefik_sticky_incident"
+                        httpOnly: true
+                        secure: true
+                # Tell Traefik to flush data immediately to keep the socket alive
+                responseForwarding:
+                    flushInterval: -1 # Changed from 100ms to -1 for immediate flushing
+                servers:
+                    - url: "http://incident-service:3003"
+
+    middlewares:
+        secure-headers:
+            headers:
+                customRequestHeaders:
+                    X-Forwarded-Proto: "https"
+                customResponseHeaders:
+                    Strict-Transport-Security: "max-age=31536000; includeSubDomains"
+                    X-Frame-Options: "SAMEORIGIN"
+                    X-Content-Type-Options: "nosniff"
+                    X-XSS-Protection: "1; mode=block"
+        dashboard-auth:
+            basicAuth:
+                users:
+                    - "admin:$apr1$hashedpassword"
+
+tls:
+    certificates:
+        - certFile: /certs/watchtower.local.pem
+          keyFile: /certs/watchtower.local-key.pem

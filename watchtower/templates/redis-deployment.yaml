@@ -20,6 +20,15 @@ spec:
                   image: {{ .Values.redis.image }}
                   ports:
                       - containerPort: 6379
+                  resources:
+                      requests:
+                          # prettier-ignore
+                          cpu: {{ .Values.redis.resources.requests.cpu }}
+                          memory: {{ .Values.redis.resources.requests.memory }}
+                      limits:
+                          # prettier-ignore
+                          cpu: {{ .Values.redis.resources.limits.cpu }}
+                          memory: {{ .Values.redis.resources.limits.memory }}
                   startupProbe:
                       exec:
                           command:

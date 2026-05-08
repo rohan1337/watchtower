@@ -5,9 +5,14 @@ metadata:
     name: watchtower-ingress
     # prettier-ignore
     namespace: {{ .Values.namespace }}
-    annotations: {}
+    annotations:
+        nginx.ingress.kubernetes.io/ssl-redirect: "true"
 spec:
     ingressClassName: nginx
+    tls:
+        - hosts:
+            - watchtower.local
+          secretName: watchtower-tls
     rules:
         # prettier-ignore
         - host: {{ .Values.ingress.host }}
@@ -48,6 +53,33 @@ spec:
                                 # prettier-ignore
                                 number: {{ .Values.incident.port }}
 
+                  - path: /api/alerts
+                    pathType: Prefix
+                    backend:
+                        service:
+                            name: incident-service
+                            port:
+                                # prettier-ignore
+                                number: {{ .Values.incident.port }}
+
+                  - path: /api/events
+                    pathType: Prefix
+                    backend:
+                        service:
+                            name: incident-service
+                            port:
+                                # prettier-ignore
+                                number: {{ .Values.incident.port }}
+
+                  - path: /api/integrations
+                    pathType: Prefix
+                    backend:
+                        service:
+                            name: incident-service
+                            port:
+                                # prettier-ignore
+                                number: {{ .Values.incident.port }}
+
                   - path: /socket.io
                     pathType: Prefix
                     backend:
@@ -57,3 +89,18 @@ spec:
                                 # prettier-ignore
                                 number: {{ .Values.incident.port }}
 {{- end }}
+
+# CLI code for setting TLS secret (run once)
+# kubectl create secret tls watchtower-tls `
+#   --cert=certs/watchtower.local.pem `
+#   --key=certs/watchtower.local-key.pem `
+#   -n watchtower
+
+# Install ingress-nginx for local development (run once)
+# kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+
+# Check ingress-nginx controller and change LoadBalancer to NodePort if using kind as LoadBalancer works only with cloud providers
+# kubectl edit svc ingress-nginx-controller -n ingress-nginx
+
+# Restart ingress-nginx controller to apply changes
+# kubectl rollout restart deployment ingress-nginx-controller -n ingress-nginx

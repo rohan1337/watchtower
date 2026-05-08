@@ -20,6 +20,7 @@ export default function SelectWorkspacePage() {
 	const { user, loading } = useAuth();
 	const [selecting, setSelecting] = useState<string | null>(null);
 	const [initializing, setInitializing] = useState(true);
+	const [hasAutoSelected, setHasAutoSelected] = useState(false);
 
 	const router = useRouter();
 
@@ -37,7 +38,8 @@ export default function SelectWorkspacePage() {
 		}
 
 		// Only one workspace → auto activate
-		if (user.tenants.length === 1) {
+		if (user.tenants.length === 1 && !hasAutoSelected) {
+			setHasAutoSelected(true);
 			autoSelectWorkspace(user.tenants[0]);
 			return;
 		}

@@ -19,3 +19,6 @@ spec:
         automated:
             prune: true
             selfHeal: true
+
+# To apply this ArgoCD application, run the following command:
+# kubectl apply -f argocd/argocd-app.yaml
