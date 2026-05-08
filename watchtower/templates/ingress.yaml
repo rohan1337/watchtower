@@ -11,8 +11,8 @@ spec:
     ingressClassName: nginx
     tls:
         - hosts:
-            - watchtower.local
-          secretName: watchtower-tls
+            - {{ .Values.ingress.host }}
+          secretName: {{ .Values.ingress.tlsSecretName | default "watchtower-tls" }}
     rules:
         # prettier-ignore
         - host: {{ .Values.ingress.host }}

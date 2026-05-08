@@ -100,8 +100,8 @@ jobs:
                   cache-from: type=gha
                   cache-to: type=gha,mode=max
                   build-args: |
-                      ${{ matrix.service.name == 'frontend' && 'NEXT_PUBLIC_API_BASE_URL_AUTH_SER=/api' || '' }}
-                      ${{ matrix.service.name == 'frontend' && 'NEXT_PUBLIC_API_BASE_URL_INCIDENT_SER=/api' || '' }}
+                      NEXT_PUBLIC_API_BASE_URL_AUTH_SER=/api
+                      NEXT_PUBLIC_API_BASE_URL_INCIDENT_SER=/api
 
             - name: Scan Image (Trivy)
               uses: aquasecurity/trivy-action@v0.20.0
