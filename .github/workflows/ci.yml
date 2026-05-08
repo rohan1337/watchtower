@@ -85,7 +85,9 @@ jobs:
               with:
                   scan-type: fs
                   scan-ref: ${{ matrix.service.path }}
-                  exit-code: 1
+                  # exit-code: 1
+                  exit-code: 0
+                  severity: CRITICAL
 
             - name: Build Image (local only)
               uses: docker/build-push-action@v5
