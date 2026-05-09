@@ -96,7 +96,7 @@ jobs:
                   push: false
                   load: true
                   tags: |
-                      watchtower-${{ matrix.service.name }}:${{ github.sha }}
+                      ghcr.io/${{ github.repository_owner }}/watchtower-${{ matrix.service.name }}:${{ github.sha }}
                   cache-from: type=gha
                   cache-to: type=gha,mode=max
                   build-args: |
@@ -106,15 +106,12 @@ jobs:
             - name: Scan Image (Trivy)
               uses: aquasecurity/trivy-action@v0.20.0
               with:
-                  image-ref: watchtower-${{ matrix.service.name }}:${{ github.sha }}
+                  image-ref: ghcr.io/${{ github.repository_owner }}/watchtower-${{ matrix.service.name }}:${{ github.sha }}
                   # exit-code: 1
                   exit-code: 0
                   # severity: CRITICAL,HIGH
                   severity: CRITICAL
 
-            - name: Push Image
-              run: |
-                  docker push ghcr.io/${{ github.repository_owner }}/watchtower-${{ matrix.service.name }}:${{ github.sha }}
             - name: Push Image
               run: |
                   docker push ghcr.io/${{ github.repository_owner }}/watchtower-${{ matrix.service.name }}:${{ github.sha }}
