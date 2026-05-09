@@ -95,7 +95,8 @@ jobs:
                   exit-code: 0
                   severity: CRITICAL
 
-            - name: Build Image (local only)
+            # - name: Build Image (local only)
+            - name: Build & Push Image (local only)
               uses: docker/build-push-action@v5
               with:
                   context: ${{ matrix.service.path }}
@@ -104,7 +105,6 @@ jobs:
                   # load: true
                   tags: |
                       ghcr.io/${{ github.repository_owner }}/watchtower-${{ matrix.service.name }}:${{ github.sha }}
-                      ghcr.io/${{ github.repository_owner }}/watchtower-${{ matrix.service.name }}:latest
                   cache-from: type=gha
                   cache-to: type=gha,mode=max
 
@@ -117,6 +117,6 @@ jobs:
                   # severity: CRITICAL,HIGH
                   severity: CRITICAL
 
-            - name: Push Image
-              run: |
-                  docker push ghcr.io/${{ github.repository_owner }}/watchtower-${{ matrix.service.name }}:${{ github.sha }}
+            # - name: Push Image
+            #   run: |
+            #       docker push ghcr.io/${{ github.repository_owner }}/watchtower-${{ matrix.service.name }}:${{ github.sha }}
