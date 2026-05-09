@@ -50,7 +50,7 @@ const LoginPage = () => {
 		}
 
 		try {
-			const res = await fetch(`${BASE_URL_AUTH_SER}/auth/login`, {
+			const res = await fetch(`${BASE_URL_AUTH_SER}/api/auth/login`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				credentials: "include", // 🔴 REQUIRED

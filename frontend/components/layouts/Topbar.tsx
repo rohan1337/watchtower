@@ -16,7 +16,7 @@ export default function Topbar({ tenantId }: Props) {
 
 	const handleLogout = async () => {
 		try {
-			const res = await fetch(`${BASE_URL_AUTH_SER}/auth/logout`, {
+			const res = await fetch(`${BASE_URL_AUTH_SER}/api/auth/logout`, {
 				method: "POST",
 				credentials: "include",
 			});
