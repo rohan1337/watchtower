@@ -25,7 +25,7 @@ export default function WorkspaceSwitcher({ currentTenantId }: Props) {
 
 	useEffect(() => {
 		const fetchTenants = async () => {
-			const res = await fetch(`${BASE_URL_AUTH_SER}/auth/me`, {
+			const res = await fetch(`${BASE_URL_AUTH_SER}/api/auth/me`, {
 				credentials: "include",
 			});
 
@@ -50,7 +50,7 @@ export default function WorkspaceSwitcher({ currentTenantId }: Props) {
 	}, []);
 
 	const handleSelect = async (tenant: Tenant) => {
-		await fetch(`${BASE_URL_AUTH_SER}/auth/select-workspace`, {
+		await fetch(`${BASE_URL_AUTH_SER}/api/auth/select-workspace`, {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			credentials: "include",

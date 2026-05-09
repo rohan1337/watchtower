@@ -29,7 +29,7 @@ export default async function TenantLayout({
 		.map((cookie) => `${cookie.name}=${cookie.value}`)
 		.join("; ");
 
-	const res = await fetch(`${BASE_URL_AUTH_SER}/auth/me`, {
+	const res = await fetch(`${BASE_URL_AUTH_SER}/api/auth/me`, {
 		headers: {
 			Cookie: cookieHeader,
 		},

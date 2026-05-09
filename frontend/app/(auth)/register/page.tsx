@@ -47,7 +47,7 @@ const RegisterPage = () => {
 		}
 
 		try {
-			const res = await fetch(`${BASE_URL_AUTH_SER}/auth/register`, {
+			const res = await fetch(`${BASE_URL_AUTH_SER}/api/auth/register`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
