@@ -99,10 +99,12 @@ jobs:
               uses: docker/build-push-action@v5
               with:
                   context: ${{ matrix.service.path }}
-                  push: false
-                  load: true
+                  # push: false
+                  push: true
+                  # load: true
                   tags: |
                       ghcr.io/${{ github.repository_owner }}/watchtower-${{ matrix.service.name }}:${{ github.sha }}
+                      ghcr.io/${{ github.repository_owner }}/watchtower-${{ matrix.service.name }}:latest
                   cache-from: type=gha
                   cache-to: type=gha,mode=max
 
