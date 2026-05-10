@@ -3,32 +3,6 @@ kind: Application
 metadata:
     name: watchtower
     namespace: argocd
-    annotations:
-        argocd-image-updater.argoproj.io/image-list: frontend=ghcr.io/rohan1337/watchtower-frontend auth=ghcr.io/rohan1337/watchtower-auth-service incident=ghcr.io/rohan1337/watchtower-incident-service notification=ghcr.io/rohan1337/watchtower-notification-service
-
-        argocd-image-updater.argoproj.io/frontend.update-strategy: newest-build
-        argocd-image-updater.argoproj.io/auth.update-strategy: newest-build
-        argocd-image-updater.argoproj.io/incident.update-strategy: newest-build
-        argocd-image-updater.argoproj.io/notification.update-strategy: newest-build
-
-        argocd-image-updater.argoproj.io/frontend.allow-tags: regexp:^([a-f0-9]{40})$
-        argocd-image-updater.argoproj.io/auth.allow-tags: regexp:^([a-f0-9]{40})$
-        argocd-image-updater.argoproj.io/incident.allow-tags: regexp:^([a-f0-9]{40})$
-        argocd-image-updater.argoproj.io/notification.allow-tags: regexp:^([a-f0-9]{40})$
-
-        argocd-image-updater.argoproj.io/write-back-method: git
-
-        argocd-image-updater.argoproj.io/frontend.helm.image-name: frontend.image.repository
-        argocd-image-updater.argoproj.io/frontend.helm.image-tag: frontend.image.tag
-
-        argocd-image-updater.argoproj.io/auth.helm.image-name: auth.image.repository
-        argocd-image-updater.argoproj.io/auth.helm.image-tag: auth.image.tag
-
-        argocd-image-updater.argoproj.io/incident.helm.image-name: incident.image.repository
-        argocd-image-updater.argoproj.io/incident.helm.image-tag: incident.image.tag
-
-        argocd-image-updater.argoproj.io/notification.helm.image-name: notification.image.repository
-        argocd-image-updater.argoproj.io/notification.helm.image-tag: notification.image.tag
 spec:
     project: default
 
