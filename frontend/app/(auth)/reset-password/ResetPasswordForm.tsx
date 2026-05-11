@@ -67,7 +67,7 @@ export default function ResetPasswordForm() {
 
 		try {
 			const res = await fetch(
-				`${BASE_URL_AUTH_SER}/api/auth/reset-password`,
+				`${BASE_URL_AUTH_SER}/auth/reset-password`,
 				{
 					method: "POST",
 					headers: { "Content-Type": "application/json" },

@@ -10,7 +10,7 @@ export default function NotificationSettings() {
 
 	useEffect(() => {
 		axios
-			.get("/api/users/notification-settings")
+			.get("/users/notification-settings")
 			.then((res) => setSettings(res.data))
 			.catch(() => setError("Failed to load notification settings"));
 	}, []);
@@ -22,7 +22,7 @@ export default function NotificationSettings() {
 		setSettings((prev) => ({ ...prev, [field]: value }));
 
 		try {
-			await axios.put("/api/users/notification-settings", {
+			await axios.put("/users/notification-settings", {
 				[field]: value,
 			});
 		} catch {

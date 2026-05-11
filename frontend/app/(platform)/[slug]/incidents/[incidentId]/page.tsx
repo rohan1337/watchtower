@@ -13,7 +13,7 @@ export default function IncidentDetailPage() {
 	useEffect(() => {
 		const fetchIncident = async () => {
 			const res = await fetch(
-				`${BASE_URL_INC_SER}/api/incidents/${incidentId}`,
+				`${BASE_URL_INC_SER}/incidents/${incidentId}`,
 				{ credentials: "include" },
 			);
 

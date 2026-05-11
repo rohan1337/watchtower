@@ -51,7 +51,7 @@ export default function SelectWorkspacePage() {
 	const autoSelectWorkspace = async (tenant: Tenant) => {
 		try {
 			const res = await fetch(
-				`${BASE_URL_AUTH_SER}/api/auth/select-workspace`,
+				`${BASE_URL_AUTH_SER}/auth/select-workspace`,
 				{
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
@@ -79,7 +79,7 @@ export default function SelectWorkspacePage() {
 			setInitializing(true);
 
 			const res = await fetch(
-				`${BASE_URL_AUTH_SER}/api/auth/select-workspace`,
+				`${BASE_URL_AUTH_SER}/auth/select-workspace`,
 				{
 					method: "POST",
 					headers: { "Content-Type": "application/json" },

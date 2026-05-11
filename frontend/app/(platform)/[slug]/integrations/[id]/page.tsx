@@ -31,7 +31,7 @@ export default function IntegrationDetailPage() {
 					<h3 className="font-medium">Webhook URL</h3>
 
 					<code className="block bg-gray-100 p-2">
-						POST /inc-ser/api/integrations/webhook
+						POST /inc-ser/integrations/webhook
 					</code>
 				</div>
 

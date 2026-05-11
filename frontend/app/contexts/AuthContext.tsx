@@ -45,7 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 	const fetchUser = useCallback(async () => {
 		try {
-			const res = await authApi.get("/api/auth/me");
+			const res = await authApi.get("/auth/me");
 
 			setUser({
 				id: res.data.user.id,
@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 				hasTriedRefreshRef.current = true;
 
 				try {
-					await authApi.post("/api/auth/refresh");
+					await authApi.post("/auth/refresh");
 					return await fetchUser();
 				} catch {
 					setUser(null);
@@ -75,7 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 	const signOut = useCallback(async () => {
 		try {
-			await authApi.post("/api/auth/logout");
+			await authApi.post("/auth/logout");
 		} catch {}
 
 		setUser(null);

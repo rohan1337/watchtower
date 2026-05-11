@@ -36,7 +36,7 @@ export default function PasswordSettings() {
 			setLoading(true);
 			setError("");
 
-			await axios.put("/api/users/change-password", {
+			await axios.put("/users/change-password", {
 				currentPassword: form.currentPassword,
 				newPassword: form.newPassword,
 			});

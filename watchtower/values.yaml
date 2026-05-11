@@ -90,8 +90,8 @@ frontend:
         tag: latest
     port: 3000
     configs:
-        authBaseUrl: "/api/auth"
-        incidentBaseUrl: "/api/incidents"
+        authBaseUrl: "/api"
+        incidentBaseUrl: "/api"
     resources:
         requests:
             cpu: 250m

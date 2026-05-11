@@ -10,7 +10,7 @@ export default function ProfileSettings() {
 
 	useEffect(() => {
 		axios
-			.get("/api/users/me")
+			.get("/users/me")
 			.then((res) => setUser(res.data))
 			.catch((err) =>
 				setError(
@@ -22,7 +22,7 @@ export default function ProfileSettings() {
 
 	const handleSave = async () => {
 		try {
-			await axios.put("/api/users/me", { name: user.name });
+			await axios.put("/users/me", { name: user.name });
 			alert("Updated");
 		} catch (err) {
 			if (axios.isAxiosError(err)) {

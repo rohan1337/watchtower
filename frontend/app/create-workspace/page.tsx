@@ -33,7 +33,7 @@ const CreateWorkspacePage = () => {
 		}
 
 		try {
-			const res = await fetch(`${BASE_URL_AUTH_SER}/api/tenants`, {
+			const res = await fetch(`${BASE_URL_AUTH_SER}/tenants`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -56,7 +56,7 @@ const CreateWorkspacePage = () => {
 
 			// Call select-workspace to issue scoped JWT
 			const selectRes = await fetch(
-				`${BASE_URL_AUTH_SER}/api/auth/select-workspace`,
+				`${BASE_URL_AUTH_SER}/auth/select-workspace`,
 				{
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
